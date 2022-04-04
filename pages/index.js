@@ -2,7 +2,9 @@ import Head from 'next/head'
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import Footer from "./components/Footer/footer.js";
-import Header from "./components/Header/header.js"
+import PageHeader from "./components/Header/header.js"
+import { Header, Table } from 'semantic-ui-react'
+import React from "react"
 
 export default function Home() {
   return (
@@ -13,9 +15,84 @@ export default function Home() {
         <link rel="icon" href="/logo.svg" />
       </Head>
       <main>
-        <Header />
+        <PageHeader />
+        <div className="main">
+          <h2>Server Resources</h2>
+          <Stats />
+        </div>
       </main>
-    <Footer/>
+      <Footer />
     </div>
   )
+}
+function Stats() {
+  const [cpuModel, setCpuModel] = React.useState('Loading...');
+  const [cpuCount, setCpuCount] = React.useState(0);
+  const [cpuUsage, setCpuUsage] = React.useState(0);
+  const [cpuStats, setCpuStats] = React.useState({totalIdle: 0, totalTick: 0, avgIdle: 0, avgTotal: 0});
+  const [memInfo, setMemInfo] = React.useState({totalMemMb: 0, usedMemMb: 0, freeMemMb: 0, usedMemPercentage: 0});
+  if (cpuModel === 'Loading...') {
+    getInfo();
+  }
+  return (
+    <Table singleLine>
+      <Table.Body>
+        <Table.Row>
+          <Table.Cell>CPU Model</Table.Cell>
+          <Table.Cell>{cpuModel}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>CPU Usage</Table.Cell>
+          <Table.Cell>{cpuUsage}%</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>CPU Count</Table.Cell>
+          <Table.Cell>{cpuCount}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Total CPU Idle Time</Table.Cell>
+          <Table.Cell>{cpuStats.totalIdle}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Average CPU Idle Time</Table.Cell>
+          <Table.Cell>{cpuStats.avgIdle}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Total CPU Tick Time</Table.Cell>
+          <Table.Cell>{cpuStats.totalTick}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Average Total CPU Time</Table.Cell>
+          <Table.Cell>{cpuStats.avgTotal}</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Memory installed</Table.Cell>
+          <Table.Cell>{memInfo.totalMemMb} MB</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Used Memory</Table.Cell>
+          <Table.Cell>{memInfo.usedMemMb} MB</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Free Memory</Table.Cell>
+          <Table.Cell>{memInfo.freeMemMb} MB</Table.Cell>
+        </Table.Row>
+        <Table.Row>
+          <Table.Cell>Used Percentage</Table.Cell>
+          <Table.Cell>{memInfo.usedMemPercentage}%</Table.Cell>
+        </Table.Row>
+      </Table.Body>
+    </Table>
+  )
+  async function getInfo() {
+    let info = await fetch("/api/resources");
+    info = await info.json();
+    setCpuModel(info.cpuModel);
+    setCpuCount(info.cpuCount);
+    setCpuUsage(info.cpuUsage);
+    setCpuStats(info.cpuStats);
+    setMemInfo(info.memInfo);
+    await new Promise(resolve => setTimeout(resolve, 250));
+    getInfo();
+  }
 }

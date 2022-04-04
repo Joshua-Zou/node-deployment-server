@@ -232,7 +232,7 @@ function PortConfig(props) {
     <Table celled striped>
       <Table.Header>
         <Table.Row>
-          <Table.HeaderCell colSpan='3'>Port - Changing this will only change the UI server port, and not the deployed application's port</Table.HeaderCell>
+          <Table.HeaderCell colSpan='3'>Port - Changing this will only change the UI server port, and not the deployed application&apos;s port</Table.HeaderCell>
         </Table.Row>
         <Table.Row>
           <Table.HeaderCell><Input type='number' onChange={(e, d) => { userPort = d.value }} placeholder={port} /></Table.HeaderCell>
