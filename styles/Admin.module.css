@@ -1,0 +1,6 @@
+.row {
+    transition: 0.5s background;
+}
+.row:hover {
+    background-color: #ddd !important;
+}

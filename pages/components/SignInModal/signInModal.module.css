@@ -1,0 +1,52 @@
+.container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    cursor: auto !important;
+    background-color: #282C34;
+    padding: 20px;
+    border-radius: 10px;
+    line-height: initial;
+    animation: container 0.5s;
+    z-index: 1;
+    color: white !important;
+}
+.container * {
+    cursor: auto !important;
+}
+@keyframes container {
+    from {
+        opacity: 0;
+        top: 55%;
+    }
+    to {
+        opacity: 1;
+        top: 50%;
+    }
+}
+.dimmer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    animation: dimmer 0.5s;
+    background-color: rgba(0,0,0,0.3);
+    cursor: auto;
+}
+@keyframes dimmer {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+.checkbox label {
+    color: white !important;
+}
+.loginbtn {
+    width: 100%;
+    cursor: pointer !important;
+}

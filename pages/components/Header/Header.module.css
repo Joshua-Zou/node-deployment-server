@@ -1,0 +1,35 @@
+.header {
+    background-color: rgba(0, 0, 0, 0.2);
+    display: block;
+    padding: 20px;
+    font-size: 1.4em;
+}
+
+.header a {
+    color: white;
+    text-decoration: none;
+}
+
+.logo {
+    width: 50px;
+    cursor: pointer;
+}
+
+.logoText {
+    vertical-align: top;
+    line-height: 2.1em;
+    display: inline-block;
+}
+.signedIn {
+    display: inline-block;
+    vertical-align: top;
+    line-height: 2.8em;
+    font-size: 0.8em;
+    position: absolute;
+    right: 50px;
+}
+.signedIn a {
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 20px;
+}

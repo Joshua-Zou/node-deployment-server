@@ -4,13 +4,31 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+    background: linear-gradient(to bottom, #1d2671, #2C3E50) !important; /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    color: white !important;
 }
 
 a {
-  color: inherit;
-  text-decoration: none;
+  color: #289489;
+  transition: 0.3s color;
+}
+a:hover {
+  color: #2da79a;
 }
 
 * {
   box-sizing: border-box;
+}
+
+main {
+  min-height: 100vh;
+}
+.main {
+  width: 800px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 30px;
 }
