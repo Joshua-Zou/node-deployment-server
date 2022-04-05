@@ -12,5 +12,17 @@
         }
     ],
     "auth_secret_key": "1a5bc917afe4fd9065e39073de9591216f6f833c12118a83b367a4df8af6557a",
-    "port": 3100
+    "port": 3100,
+    "deployments": [
+        {
+            "name": "urmom",
+            "internalPort": 6000,
+            "externalPort": 6000,
+            "memory": "1024",
+            "id": "545aa213b5dc0e441d7bfbd6425d0392af16999fe6e165f3dcc65033001b178c",
+            "status": "waiting for initialization",
+            "runCmd": "start",
+            "nodeVersion": "node:17.8.0-buster"
+        }
+    ]
 }

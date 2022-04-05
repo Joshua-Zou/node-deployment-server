@@ -6,7 +6,28 @@ const port = JSON.parse(fs.readFileSync("./nds_config.json")).port || 3100
 const dev = process.argv.includes('--dev')
 const app = next({ dev })
 const handle = app.getRequestHandler()
+var Docker = require('dockerode');
 
+var childProcess = require('child_process');
+var docker = new Docker();
+global.docker = docker;
+
+function runScript(scriptPath, callback) {
+    var invoked = false;
+    var process = childProcess.fork(scriptPath);
+    process.on('error', function (err) {
+        if (invoked) return;
+        invoked = true;
+        callback(err);
+    });
+    process.on('exit', function (code) {
+        if (invoked) return;
+        invoked = true;
+        var err = code === 0 ? null : new Error('exit code ' + code);
+        callback(err);
+    });
+
+}
 app.prepare().then(() => {
   const server = express()
 
@@ -25,3 +46,8 @@ app.prepare().then(() => {
     console.log(`> Ready on http://localhost:${port}`)
   })
 })
+
+runScript('./garbageManager.js', function (err) {
+  if (err) throw err;
+  console.log('Garbage Manager process ended unexpectedly!');
+});
