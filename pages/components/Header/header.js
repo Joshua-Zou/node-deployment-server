@@ -58,9 +58,11 @@ async function getLoginInfo() {
     return data;
 }
 function getCachedAuth() {
-    if (sessionStorage.getItem("auth")) {
-        return sessionStorage.getItem("auth")
-    } else {
-        return localStorage.getItem("auth")
+    if (typeof sessionStorage !== "undefined") {
+        if (sessionStorage.getItem("auth")) {
+            return sessionStorage.getItem("auth")
+        } else {
+            return localStorage.getItem("auth")
+        }
     }
 }

@@ -11,6 +11,7 @@ var Docker = require('dockerode');
 var childProcess = require('child_process');
 var docker = new Docker();
 global.docker = docker;
+global.projectRoot = __dirname;
 
 function runScript(scriptPath, callback) {
     var invoked = false;

@@ -9,6 +9,6 @@ COPY ./ ./
 ENV DEPLOYMENTID={{DEPLOYMENTIDTEMPLATE}}
 
 #RUN npm install
-RUN npm install
+RUN npm install ./code ./code
 
-CMD ["npm", "run", "{{RUNCMDTEMPLATE}}"]
+CMD ["npm", "--prefix", "./code" , "run", "{{RUNCMDTEMPLATE}}"]

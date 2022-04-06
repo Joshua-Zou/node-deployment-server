@@ -1,0 +1,29 @@
+{
+  "name": "elonbot",
+  "version": "0.0.1",
+  "description": "a fun little discord bot that talks like elon",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Joshua-Zou/ElonBot"
+  },
+  "keywords": [
+    "fun",
+    "discord",
+    "bot",
+    "elon",
+    "musk"
+  ],
+  "author": "n/a",
+  "license": "MIT",
+  "dependencies": {
+    "coingecko-api": "1.0.10",
+    "discord.js": "12.5.1",
+    "mongodb": "3.6.5",
+    "topgg-autoposter": "^2.0.1",
+    "yahoo-stock-prices": "1.1.0"
+  }
+}

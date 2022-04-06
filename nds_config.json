@@ -15,11 +15,11 @@
     "port": 3100,
     "deployments": [
         {
-            "name": "urmom",
+            "name": "help",
             "internalPort": 6000,
             "externalPort": 6000,
-            "memory": "1024",
-            "id": "545aa213b5dc0e441d7bfbd6425d0392af16999fe6e165f3dcc65033001b178c",
+            "memory": "512",
+            "id": "619b5e7b47cfb20be7195ab2a55dedec77dcd6d3af64447603cd8b6400584bc1",
             "status": "waiting for initialization",
             "runCmd": "start",
             "nodeVersion": "node:17.8.0-buster"

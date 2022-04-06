@@ -1,0 +1,40 @@
+.header {
+    padding-left: 20px;
+    border-bottom: 1px solid grey;
+    font-size: 1.3em;
+}
+.header span {
+    width: 100px;
+    text-align: center;
+    cursor: pointer;
+    display: inline-block;
+    color: #cfd9e7;
+    padding-bottom: 15px;
+    padding-top: 15px;
+}
+.header span::after {
+    content: "";
+    position: absolute;
+    width: 80px;
+    height: 1px;
+    background-color: #cfd9e7;
+    transform: translate(-70px, 25px);
+    opacity: 0;
+    transition: 0.5s opacity;
+}
+.header span:hover::after {
+    opacity: 1;
+}
+.onpage {
+    color: #78c3ff !important;
+}
+.onpage::after {
+    background-color: #78c3ff !important;
+    opacity: 1 !important;
+}
+.exploreRow {
+    cursor: pointer;
+}
+.exploreRow:hover {
+    background-color: #e6e6e6 !important
+}
