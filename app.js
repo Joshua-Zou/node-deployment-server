@@ -108,7 +108,13 @@ app.prepare().then(() => {
     
     // STARTING
 
-    docker.createContainer({Image: `nds-deployment-${id}`, name: `nds-container-${id}`}, function (err, container) {
+    docker.createContainer({
+      Image: `nds-deployment-${id}`, 
+      name: `nds-container-${id}`, 
+      ExposedPorts: {
+        [`${deployment.internalPort}/${deployment.externalPort}`]: {}
+      }
+    }, function (err, container) {
       if (err) {
         deployment.status = "failed to start";
         config.deployments[deploymentIndex] = deployment;
