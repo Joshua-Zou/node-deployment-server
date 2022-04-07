@@ -77,13 +77,13 @@ app.prepare().then(() => {
       if (!buildListeners[id]) return;
       sendEventsToAll(text, buildListeners[id]);
     }
-    res.send({data: "deployment started"});
+    res.send({ data: "deployment started" });
     deployment.status = "building";
     config.deployments[deploymentIndex] = deployment;
     sendSSE("Starting to build deployment...")
     fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-    try {fs.unlinkSync("./deployments/" + id + "/build.zip")} catch(e) {}
-    try {fs.unlinkSync("./deployments/" + id + "/build.tar")} catch(e) {}
+    try { fs.unlinkSync("./deployments/" + id + "/build.zip") } catch (e) { }
+    try { fs.unlinkSync("./deployments/" + id + "/build.tar") } catch (e) { }
 
     sendSSE("Creating tarball...")
     await zipDirectory("./deployments/" + id, "./deployments/" + id + "/build.zip");
@@ -93,29 +93,29 @@ app.prepare().then(() => {
     sendSSE("Finished tarball creation. Starting to build docker image...")
     var buildStream = await docker.buildImage("./deployments/" + id + "/build.tar", { t: "nds-deployment-" + id });
     buildStream.pipe(process.stdout)
-    buildStream.on('data', function(e){
+    buildStream.on('data', function (e) {
       sendSSE(e.toString());
     })
     await new Promise((resolve, reject) => {
       docker.modem.followProgress(buildStream, (err, res) => err ? reject(err) : resolve(res));
     });
-    docker.pruneImages() 
-    docker.pruneContainers() 
+    docker.pruneImages()
+    docker.pruneContainers()
     deployment.status = "starting";
     config.deployments[deploymentIndex] = deployment;
     fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
     sendSSE("Finished building docker image. Starting container... Switch over to the Console tab to see the application logs.")
-    
+
     // STARTING
     var container = docker.getContainer(`nds-container-${id}`);
     try {
       await container.stop()
       await container.remove()
-    }catch(err){}
+    } catch (err) { }
 
     docker.createContainer({
-      Image: `nds-deployment-${id}`, 
-      name: `nds-container-${id}`, 
+      Image: `nds-deployment-${id}`,
+      name: `nds-container-${id}`,
       ExposedPorts: {
         [`${deployment.internalPort}/${deployment.externalPort}`]: {}
       }
@@ -144,7 +144,7 @@ app.prepare().then(() => {
 
   })
   server.get("/api/deployment/buildLog", buildEventsHandler)
-
+  server.get("/api/deployment/runLogs", runEventsHandler)
 
   server.all('*', (req, res) => {
     return handle(req, res)
@@ -165,6 +165,52 @@ runScript('./garbageManager.js', function (err) {
 
 function sendEventsToAll(text, clients) {
   clients.forEach(client => client.response.write(`data: ${text}\n\n`))
+}
+async function runEventsHandler(request, response, next) {
+  var req = request;
+  var res = response;
+  let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+  if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+  if (!config.auth_secret_key) {
+    let authkey = crypto.randomBytes(32).toString("hex");
+    config.auth_secret_key = authkey;
+    fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+  }
+  var user = null;
+  for (let i in config.authorized_users) {
+    let testUser = config.authorized_users[i];
+    let hash = crypto.createHash('sha256');
+    let userkey = hash.update(testUser.username);
+    userkey = hash.update(testUser.password);
+    userkey = hash.update(config.auth_secret_key);
+    if (!req.query.auth) req.query.auth
+    if (userkey.digest('hex') === req.query.auth) {
+      user = testUser
+      break;
+    }
+  }
+  if (user === null) return res.send({ error: "Invalid authkey" });
+  let id = req.query.id;
+  let deployment = config.deployments.find(d => d.id === id);
+  if (!deployment) return res.send({ error: "Deployment not found!" });
+
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache'
+  };
+  response.writeHead(200, headers);
+
+  const data = `data: Successfully established write stream with server\n\n`;
+
+  response.write(data);
+
+
+  var container = docker.getContainer(`nds-container-${id}`);
+  var logs = await container.logs({ stdout: true, stderr: true, follow: true })
+  logs.on("data", function (log) {
+    response.write(`data: ${log}\n\n`);
+  })
 }
 function zipDirectory(sourceDir, outPath) {
   const archive = archiver('zip', { zlib: { level: 9 } });

@@ -18,7 +18,7 @@ export default function Deployment(props) {
     const router = useRouter()
     id = router.query.id
     const [deployment, setDeployment] = useState({})
-    if (id && !deployment.id) {
+    if (id && deployment && !deployment.id) {
         getDeploymentInformation(id).then(data => {
             setDeployment(data)
         })
@@ -220,7 +220,7 @@ function Deploy() {
             </form>
             <h3>Deploy</h3>
             {DButton}
-            <DeployConsole visible={consoleVisible} logs={dconsole} />
+            <DeployConsole visible={consoleVisible} logs={dconsole} text="Build & Deployment Logs"/>
         </div>
     )
     async function initDeploy() {
@@ -261,7 +261,7 @@ class DeployConsole extends React.Component {
         if (this.props.visible === false) return <div></div>
         return (
             <div className={styles.deployConsole}>
-                <h2>Build & Deployment Logs</h2>
+                <h2>{this.props.text}</h2>
                 <div className={styles.console}>
                     {this.props.logs.map((log, index) => {
                         return (
@@ -280,13 +280,23 @@ class DeployConsole extends React.Component {
         )
     }
 }
-class Console extends React.Component {
-    render() {
-        return (
-            <div>
-                <h3>Put console stuff here</h3>
-            </div>
-        )
+function Console() {
+    const [dconsole, setConsole] = useState(["Loading..."]);
+    if (dconsole[dconsole.length-1] === "Loading...") {
+        initEventStream();
+    }
+    return (
+        <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
+    )
+    function initEventStream(){
+        var evtSource = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
+        evtSource.onmessage = function (e) {
+            console.log(e.data)
+            newLog(e.data)
+        }
+    }
+    function newLog(log) {
+        setConsole(dconsole => [...dconsole, log]);
     }
 }
 class Settings extends React.Component {
