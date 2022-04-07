@@ -107,6 +107,11 @@ app.prepare().then(() => {
     sendSSE("Finished building docker image. Starting container... Switch over to the Console tab to see the application logs.")
     
     // STARTING
+    var container = docker.getContainer(`nds-container-${id}`);
+    try {
+      await container.stop()
+      await container.remove()
+    }catch(err){}
 
     docker.createContainer({
       Image: `nds-deployment-${id}`, 
@@ -116,6 +121,7 @@ app.prepare().then(() => {
       }
     }, function (err, container) {
       if (err) {
+        sendSSE("Error starting container: " + err.toString());
         deployment.status = "failed to start";
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -123,6 +129,7 @@ app.prepare().then(() => {
       }
       container.start(function (err, data) {
         if (err) {
+          sendSSE("Error starting container: " + err.toString());
           deployment.status = "failed to start";
           config.deployments[deploymentIndex] = deployment;
           fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
