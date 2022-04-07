@@ -15,12 +15,12 @@
     "port": 3100,
     "deployments": [
         {
-            "name": "help",
+            "name": "poggers",
             "internalPort": 6000,
             "externalPort": 6000,
             "memory": "512",
-            "id": "619b5e7b47cfb20be7195ab2a55dedec77dcd6d3af64447603cd8b6400584bc1",
-            "status": "waiting for initialization",
+            "id": "d2f345a2425a6322c2a9cbdd901eb68c4859a0db16f901ac2368ee8360e0b176",
+            "status": "running",
             "runCmd": "start",
             "nodeVersion": "node:17.8.0-buster"
         }

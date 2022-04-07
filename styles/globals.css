@@ -32,3 +32,26 @@ main {
   margin-right: auto;
   margin-top: 30px;
 }
+.messageModal {
+  position: fixed;
+  bottom: -100px;
+  width: 50%;
+  min-width: 200px;
+  padding: 10px;
+  display: block;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  border-radius: 10px;
+  background-color: rgb(0, 85, 221);
+  font-size: 1.5em;
+  cursor: pointer;
+  transition: bottom 0.5s;
+  color: white;
+  z-index: 100;
+  font-size: 21px;
+}
+.messageModal.open {
+  bottom: 40px;
+  transition: all 0.5s ease 0s;
+}

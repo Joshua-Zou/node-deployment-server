@@ -144,7 +144,7 @@ export default async function handler(req, res) {
         fs.rmSync(`${global.projectRoot}/deployments/${id}/code`, { recursive: true, force: true });
         fs.renameSync(`${global.projectRoot}/deployments/${id}/${folderName}`, `${global.projectRoot}/deployments/${id}/code`)
         fs.unlinkSync(zipPath)
-        return res.send("hi")
+        return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
     }
 }
 String.prototype.replaceAll = function (find, replace){

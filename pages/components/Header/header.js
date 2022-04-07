@@ -7,6 +7,8 @@ import ActiveLink from "../ActiveLink.js"
 
 export default function Header() {
     const [data, setData] = useState({loading: true});
+    const [modalOpen, setModalOpen] = useState("");
+    const [modalText, setModalText] = useState("");
     function RenderSignedIn(props) {
         const [signInVisibility, setSignInVisibility] = useState(false);
         if (props.data.loading === true) return (<div className={styles.signedIn}>
@@ -42,14 +44,31 @@ export default function Header() {
     if (data.loading === true) {
         getLoginInfo().then(data => {
             setData(data)
+            showMessage();
         })
     }
     return (
         <header className={styles.header}>
             <ActiveLink href="/"><img src="/logo.svg" className={styles.logo} alt="logo" /><span className={styles.logoText}>Node Deployment Server</span></ActiveLink>
             <RenderSignedIn data={data}/>
+            <div className={`messageModal ${modalOpen}`} onClick={setModalOpen}>
+                {modalText}
+            </div>
         </header>
     )
+    function showMessage(){
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('message') && urlParams.get('message') !== "null") {
+            let message = urlParams.get('message')
+            urlParams.set("message", null);
+            setModalOpen("open");
+            setModalText(message);
+            setTimeout(function(){
+                changeQueryString("?"+urlParams.toString())  
+            }, 1000)
+            
+        }
+    }
 }
 
 async function getLoginInfo() {
@@ -65,4 +84,10 @@ function getCachedAuth() {
             return localStorage.getItem("auth")
         }
     }
+}
+function changeQueryString(searchString, documentTitle){      
+    documentTitle = typeof documentTitle !== 'undefined' ? documentTitle : document.title;      
+    var urlSplit=( window.location.href ).split( "?" );      
+    var obj = { Title: documentTitle, Url: urlSplit[0] + searchString };      
+    history.pushState(obj, obj.Title, obj.Url);      
 }

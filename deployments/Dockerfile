@@ -4,11 +4,10 @@ EXPOSE {{INTERNALPORTTEMPLATE}}
 
 ENV PORT {{INTERNALPORTTEMPLATE}}
 
-COPY ./ ./
+COPY ./code ./
 
 ENV DEPLOYMENTID={{DEPLOYMENTIDTEMPLATE}}
 
-#RUN npm install
-RUN npm install ./code ./code
+RUN npm install
 
-CMD ["npm", "--prefix", "./code" , "run", "{{RUNCMDTEMPLATE}}"]
+CMD ["npm", "run", "{{RUNCMDTEMPLATE}}"]

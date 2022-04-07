@@ -8,6 +8,8 @@ import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
 import { useRouter } from "next/router"
 import styles from "../../styles/deployment.module.css"
+import Ansi from "ansi-to-react";
+import unescapejs from "unescape-js"
 
 var id = ""
 
@@ -22,7 +24,7 @@ export default function Deployment(props) {
         })
     }
     const [tabIndex, setTabIndex] = useState(0)
-    const tabs = [<Explore key="0"/>, <Deploy key="1"/>, <Console key="2"/>, <Settings key="3"/>];
+    const tabs = [<Explore key="0" />, <Deploy key="1" />, <Console key="2" />, <Settings key="3" />];
     const tabNames = ["Explore", "Deploy", "Console", "Settings"]
     return (
         <div>
@@ -35,7 +37,7 @@ export default function Deployment(props) {
                 <Header />
                 <div className='main'>
                     <div>
-                        <h2>Deployment name: {deployment.name}</h2>
+                        <h2>{deployment.name} | <span style={{fontSize: "0.75em", fontWeight: "normal"}}>{deployment.status}</span></h2>
                     </div>
                     <div className={styles.header}>
                         {
@@ -160,19 +162,123 @@ function Explore() {
 }
 
 function Deploy() {
+    const [DButton, setDButton] = useState(() => {
+        return (
+            <div>
+                <span>Deployment is already in the process of updating and redeploying!</span><br></br><br></br>
+                <Button animated='vertical' primary disabled>
+                    <Button.Content hidden><Icon name='rocket' /></Button.Content>
+                    <Button.Content visible>
+                        Deploy
+                    </Button.Content>
+                </Button>
+            </div>
+        )
+    })
+    const [consoleVisible, setConsoleVisible] = useState(false)
+    const [dconsole, setConsole] = useState(["Loading..."]);
+    const [queried, setQueried] = useState(false)
+    function newLog(log) {
+        setConsole(dconsole => [...dconsole, log]);
+    }
+    if (!queried) {
+        getDeploymentInformation(id).then(data => {
+            setQueried(true)
+            if (data.status !== "building") {
+                setDButton(() => {
+                    return (
+                        <div>
+                            <Button animated='vertical' primary onClick={initDeploy}>
+                                <Button.Content hidden><Icon name='rocket' /></Button.Content>
+                                <Button.Content visible>
+                                    Deploy
+                                </Button.Content>
+                            </Button>
+                        </div>
+                    )
+                })
+            } else {
+                var evtSource = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
+                evtSource.onmessage = function (e) {
+                    console.log(e.data)
+                    newLog(e.data)
+                }
+                setDButton()
+                setConsoleVisible(true);
+            }
+        })
+    }
     return (
         <div>
-            <h3>Upload zip file </h3>
+            <h2>Upload zip file </h2>
             <form action={`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=uploadDeployment`} method="POST" encType="multipart/form-data">
-                <Input type="file" name="zip" accept=".zip"/>
+                <Input type="file" name="zip" accept=".zip" />
                 <Input type="hidden" name="auth" value={getCachedAuth()}></Input>
                 <Input type="hidden" name="id" value={id}></Input>
                 <Input type="hidden" name="action" value="uploadDeployment"></Input>
-                <br></br>
-                <Input type="submit"></Input>
+                <Button type="submit" content="Upload" primary style={{ height: "44px", width: "100px", marginLeft: "10px" }} />
             </form>
+            <h3>Deploy</h3>
+            {DButton}
+            <DeployConsole visible={consoleVisible} logs={dconsole} />
         </div>
     )
+    async function initDeploy() {
+        console.log("Starting Deploy");
+        var evtSource = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
+        evtSource.onmessage = function (e) {
+            console.log(e.data)
+            newLog(e.data)
+        }
+        let results = await fetch(`/api/deployment/deploy?auth=${getCachedAuth()}&id=${id}`, {
+            method: "POST"
+        });
+        results = await results.json();
+        if (results.error) return alert(results.error);
+        setDButton()
+        setConsoleVisible(true);
+    }
+}
+class DeployConsole extends React.Component {
+    constructor(props) {
+        super(props);
+        // // create a ref to store the textInput DOM element
+        this.messagesEnd = React.createRef();
+        this.scrollToBottom = this.scrollToBottom.bind(this);
+    }
+    scrollToBottom = () => {
+        if (!this.messagesEnd.current) return;
+        this.messagesEnd.current.scrollIntoView();
+    }
+    componentDidMount() {
+        this.scrollToBottom();
+    }
+
+    componentDidUpdate() {
+        this.scrollToBottom();
+    }
+    render() {
+        if (this.props.visible === false) return <div></div>
+        return (
+            <div className={styles.deployConsole}>
+                <h2>Build & Deployment Logs</h2>
+                <div className={styles.console}>
+                    {this.props.logs.map((log, index) => {
+                        return (
+                            <span key={index}>
+                                <Ansi>
+                                    {unescapejs(log)}
+                                </Ansi>
+                            </span>
+                        )
+                    })}
+                    <div style={{ float: "left", clear: "both" }}
+                        ref={this.messagesEnd}>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 }
 class Console extends React.Component {
     render() {
