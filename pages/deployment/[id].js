@@ -328,14 +328,12 @@ function Console() {
         setConsole(dconsole => [...dconsole, log]);
     }
 }
-class Settings extends React.Component {
-    render() {
-        return (
-            <div>
-                <h3>Put settings stuff here</h3>
-            </div>
-        )
-    }
+function Settings() {
+    return (
+        <div>
+            <h3>Put settings stuff here</h3>
+        </div>
+    )
 }
 
 function getCachedAuth() {

@@ -1,7 +1,12 @@
-const fs = require("fs")
+const fs = require("fs");
+var Docker = require("dockerode");
+
+var docker = new Docker();
+
 async function main(){
     while (true) {
         let config = JSON.parse(fs.readFileSync("./nds_config.json"));
+        // garbage manager
         let deploymentFolders = getDirectories("./deployments");
         deploymentFolders.forEach(folder => {
             if (!config.deployments || config.deployments.length === 0) {
@@ -11,6 +16,19 @@ async function main(){
                 console.log("Found a deployment stored locally but could not find deployment in nds_config.json. Deleting deployment folder...");
                 fs.rmdirSync("./deployments/"+folder, {recursive: true});
             }
+        })
+
+        // status updater
+        let deployments = config.deployments || [];
+        deployments.forEach(deployment => {
+            var container = docker.getContainer(`nds-container-${deployment.id}`);
+            container.inspect((err, data) => {
+                if (err) return;
+                let deploymentIndex = config.deployments.findIndex(d => d.id === deployment.id);
+                deployment.status = data.State.Status;
+                config.deployments[deploymentIndex] = deployment;
+                fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+            })
         })
         await sleep(60000);
     }

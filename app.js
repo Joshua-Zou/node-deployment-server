@@ -205,9 +205,9 @@ app.prepare().then(() => {
   })
 })
 
-runScript('./garbageManager.js', function (err) {
+runScript('./service.js', function (err) {
   if (err) throw err;
-  console.log('Garbage Manager process ended unexpectedly!');
+  console.log('Service Worker process ended unexpectedly!');
 });
 
 
