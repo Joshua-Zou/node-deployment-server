@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
 import { Icon, Table, Button, Input, Dropdown } from 'semantic-ui-react'
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
 import { useRouter } from "next/router"
@@ -178,6 +178,14 @@ function Deploy() {
     const [consoleVisible, setConsoleVisible] = useState(false)
     const [dconsole, setConsole] = useState(["Loading..."]);
     const [queried, setQueried] = useState(false)
+    var evtSource = useRef(null);
+    useEffect(() => {
+        return () => {
+            if (evtSource.current !== null) {
+                evtSource.current.close();
+            }
+        }
+    }, [])
     function newLog(log) {
         setConsole(dconsole => [...dconsole, log]);
     }
@@ -198,8 +206,8 @@ function Deploy() {
                     )
                 })
             } else {
-                var evtSource = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
-                evtSource.onmessage = function (e) {
+                evtSource.current = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
+                evtSource.current.onmessage = function (e) {
                     console.log(e.data)
                     newLog(e.data)
                 }
@@ -225,8 +233,8 @@ function Deploy() {
     )
     async function initDeploy() {
         console.log("Starting Deploy");
-        var evtSource = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
-        evtSource.onmessage = function (e) {
+        evtSource.current = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
+        evtSource.current.onmessage = function (e) {
             console.log(e.data)
             newLog(e.data)
         }
@@ -282,6 +290,14 @@ class DeployConsole extends React.Component {
 }
 function Console() {
     const [dconsole, setConsole] = useState(["Loading..."]);
+    var consoleStream = useRef(null);
+    useEffect(() => {
+        return () => {
+            if (consoleStream.current !== null) {
+                consoleStream.current.close();
+            }
+        }
+    }, [])
     if (dconsole[dconsole.length-1] === "Loading...") {
         initEventStream();
     }
@@ -295,8 +311,8 @@ function Console() {
             let logs = oldLogs.data.split("\n")
             logs.forEach(l => newLog(l))
         }
-        var evtSource = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
-        evtSource.onmessage = function (e) {
+        consoleStream.current = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
+        consoleStream.current.onmessage = function (e) {
             console.log(e.data)
             newLog(e.data)
         }
