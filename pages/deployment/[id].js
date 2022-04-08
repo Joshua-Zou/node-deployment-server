@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Segment} from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment } from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -37,7 +37,7 @@ export default function Deployment(props) {
                 <Header />
                 <div className='main'>
                     <div>
-                        <h2>{deployment.name} | <span style={{fontSize: "0.75em", fontWeight: "normal"}}>{deployment.status}</span></h2>
+                        <h2>{deployment.name} | <span style={{ fontSize: "0.75em", fontWeight: "normal" }}>{deployment.status}</span></h2>
                     </div>
                     <div className={styles.header}>
                         {
@@ -228,7 +228,7 @@ function Deploy() {
             </form>
             <h3>Deploy</h3>
             {DButton}
-            <DeployConsole visible={consoleVisible} logs={dconsole} text="Build & Deployment Logs"/>
+            <DeployConsole visible={consoleVisible} logs={dconsole} text="Build & Deployment Logs" />
         </div>
     )
     async function initDeploy() {
@@ -298,13 +298,13 @@ function Console() {
             }
         }
     }, [])
-    if (dconsole[dconsole.length-1] === "Loading...") {
+    if (dconsole[dconsole.length - 1] === "Loading...") {
         initEventStream();
     }
     return (
-        <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
+        <DeployConsole visible={true} logs={dconsole} text="Application Logs" />
     )
-    async function initEventStream(){
+    async function initEventStream() {
         let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
         oldLogs = await oldLogs.json();
         if (oldLogs.data) {
@@ -351,9 +351,10 @@ function Settings() {
     }
     return (
         <div>
-            <PortSettings deployment={deployment} disabled={disabled}/>
-            <Name deployment={deployment} disabled={disabled}/>
-            <Environment deployment={deployment} disabled={disabled}/>
+            <PortSettings deployment={deployment} disabled={disabled} />
+            <Name deployment={deployment} disabled={disabled} />
+            <Environment deployment={deployment} disabled={disabled} />
+            <DeploymentActions deployment={deployment} disabled={disabled} />
         </div>
     )
     function PortSettings(props) {
@@ -362,9 +363,9 @@ function Settings() {
         return (
             <div className={styles.settingsSection}>
                 <h3>Port Mappings</h3>
-                <Input type="number" defaultValue={props.deployment.internalPort} placeholder="Internal Port" onChange={(e, d) => internalPort=d.value}/>
-                <Icon name="arrow right" style={{marginLeft: "10px"}}/>
-                <Input type="number" defaultValue={props.deployment.externalPort} placeholder="External Port" onChange={(e, d) => externalPort=d.value}/>
+                <Input type="number" defaultValue={props.deployment.internalPort} placeholder="Internal Port" onChange={(e, d) => internalPort = d.value} />
+                <Icon name="arrow right" style={{ marginLeft: "10px" }} />
+                <Input type="number" defaultValue={props.deployment.externalPort} placeholder="External Port" onChange={(e, d) => externalPort = d.value} />
                 <br></br>
                 <br></br>
                 <Button content="Save" primary disabled={props.disabled} onClick={async () => {
@@ -378,13 +379,13 @@ function Settings() {
                 }} />
             </div>
         )
-    } 
+    }
     function Name(props) {
         var name = props.deployment.name;
         return (
             <div className={styles.settingsSection}>
                 <h3>Deployment Name</h3>
-                <Input defaultValue={props.deployment.name} placeholder="Name" onChange={(e, d) => name=d.value}/>
+                <Input defaultValue={props.deployment.name} placeholder="Name" onChange={(e, d) => name = d.value} />
                 <br></br>
                 <br></br>
                 <Button content="Save" primary disabled={props.disabled} onClick={async () => {
@@ -406,13 +407,13 @@ function Settings() {
         return (
             <div className={styles.settingsSection}>
                 <h3>Deployment Environment</h3>
-                <Input defaultValue={props.deployment.memory} placeholder="Memory" onChange={(e, d) => memory=d.value} label="Memory (MB)"/>
+                <Input defaultValue={props.deployment.memory} placeholder="Memory" onChange={(e, d) => memory = d.value} label="Memory (MB)" />
                 <br></br>
                 <br></br>
-                <Input defaultValue={props.deployment.nodeVersion} placeholder="Node Image" onChange={(e, d) => nodeVersion=d.value} label="NodeJS Image"/>
+                <Input defaultValue={props.deployment.nodeVersion} placeholder="Node Image" onChange={(e, d) => nodeVersion = d.value} label="NodeJS Image" />
                 <br></br>
                 <br></br>
-                <Input defaultValue={props.deployment.runCmd} placeholder="Run Command" onChange={(e, d) => runCmd=d.value} label="npm run "/>
+                <Input defaultValue={props.deployment.runCmd} placeholder="Run Command" onChange={(e, d) => runCmd = d.value} label="npm run " />
                 <br></br>
                 <br></br>
                 <Button content="Save" primary disabled={props.disabled} onClick={async () => {
@@ -425,6 +426,36 @@ function Settings() {
                     }
                 }} />
             </div>
+        )
+    }
+    function DeploymentActions(props) {
+        const router = useRouter();
+        return (
+            <div>
+                <Button inverted color='red' onClick={() => {
+                    fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=restart`).then(res => res.json()).then(json => {
+                        if (json.error) alert(json.error);
+                        else {
+                            alert(json.data);
+                            window.location.reload();
+                        }
+                    })
+                }}>
+                    Restart Deployment
+                </Button>
+                <Button inverted color='red' style={{marginLeft: "15px"}} onClick={() => {
+                    fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=delete`).then(res => res.json()).then(json => {
+                        if (json.error) alert(json.error);
+                        else {
+                            alert(json.data);
+                            router.push("/dashboard")
+                        }
+                    })
+                }}>
+                    Delete Deployment
+                </Button>
+            </div>
+
         )
     }
 }
