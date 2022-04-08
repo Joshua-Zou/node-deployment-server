@@ -2,27 +2,9 @@
     "authorized_users": [
         {
             "username": "admin",
-            "password": "password1",
+            "password": "password",
             "permission": "admin"
-        },
-        {
-            "username": "asdf",
-            "password": "asdfasd",
-            "permission": "readwrite"
         }
     ],
-    "auth_secret_key": "1a5bc917afe4fd9065e39073de9591216f6f833c12118a83b367a4df8af6557a",
-    "port": 3100,
-    "deployments": [
-        {
-            "name": "poggers",
-            "internalPort": 6000,
-            "externalPort": 6000,
-            "memory": "512",
-            "id": "d2f345a2425a6322c2a9cbdd901eb68c4859a0db16f901ac2368ee8360e0b176",
-            "status": "running",
-            "runCmd": "start",
-            "nodeVersion": "node:17.8.0-buster"
-        }
-    ]
+    "port": 3100
 }

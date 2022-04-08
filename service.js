@@ -28,6 +28,7 @@ async function main() {
             container.inspect((err, data) => {
                 if (err) deployment.status = "waiting for initialization"
                 else deployment.status = data.State.Status;
+                if (!config.deployments) return;
                 let deploymentIndex = config.deployments.findIndex(d => d.id === deployment.id);
                 config.deployments[deploymentIndex] = deployment;
                 fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -38,7 +39,7 @@ async function main() {
         let images = await docker.listImages();
         images.forEach(image => {
             if (image.RepoTags[0].startsWith("nds-deployment")) {
-                if (!config.deployments.find(deployment => deployment.id === image.RepoTags[0].split("-")[2].slice(0, -":latest".length)))
+                if (!config.deployments || !config.deployments.find(deployment => deployment.id === image.RepoTags[0].split("-")[2].slice(0, -":latest".length)))
                     docker.getImage(image.Id).remove({ force: true }, (err, data) => {
                         if (err) console.log(err);
                         else {
