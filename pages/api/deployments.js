@@ -144,6 +144,68 @@ export default async function handler(req, res) {
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
+    } else if (req.query.action === "updatePort") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let internalPort = req.query.internalPort;
+        let externalPort = req.query.externalPort;
+        if (internalPort < 10 || internalPort > 65535) return res.send({ error: "No internal port specified or port outside of range!" });
+        if (externalPort < 10 || externalPort > 65535) return res.send({ error: "No external port specified or port outside of range!" });
+        if (config.deployments.find(d => d.externalPort === externalPort && d.id !== id)) return res.send({ error: "External port already taken!" });
+
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        deployment.internalPort = internalPort;
+        deployment.externalPort = externalPort;
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "updateName") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let name = req.query.name;
+        if (!name) return res.send({ error: "No name specified!" });
+
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        deployment.name = name;
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "updateEnvironment") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+
+        let memory = req.query.memory;
+        let nodeVersion = req.query.nodeVersion;
+        let runCmd = req.query.runCmd;
+        if (!(Number(memory) > 512)) return res.send({ error: "Memory must be at least 512MB!" });
+        if (!runCmd) return res.send({ error: "No run command specified!" });
+
+
+        let imageTag = nodeVersion.slice(nodeVersion.indexOf(":")+1);
+        let imageName = nodeVersion.slice(0, nodeVersion.indexOf(":"));
+        let image = await fetch(`https://index.docker.io/v1/repositories/${imageName}/tags/${imageTag}`);
+        image = await image.text();
+        if (image.toLowerCase() === "tag not found") return res.send({ error: "Docker image not found on the docker registry!" });
+
+        deployment.memory = memory;
+        deployment.nodeVersion = nodeVersion;
+        deployment.runCmd = runCmd;
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
     }
 }
 String.prototype.replaceAll = function (find, replace){

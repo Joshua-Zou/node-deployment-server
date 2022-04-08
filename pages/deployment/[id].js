@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown } from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment} from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -329,11 +329,104 @@ function Console() {
     }
 }
 function Settings() {
+    const [deployment, setDeployment] = useState({
+        name: "",
+        internalPort: 0,
+        externalPort: 0,
+        memory: 0,
+        runCmd: "",
+        nodeVersion: "",
+        loading: true
+    });
+    const [disabled, setDisabled] = useState(true);
+    if (deployment.loading === true) {
+        getDeploymentInformation(id).then(deployment => {
+            setDeployment(deployment);
+        })
+        getLoginInfo().then(login => {
+            if (login.permission === "admin" || login.permission === "readwrite") {
+                setDisabled(false);
+            }
+        })
+    }
     return (
         <div>
-            <h3>Put settings stuff here</h3>
+            <PortSettings deployment={deployment} disabled={disabled}/>
+            <Name deployment={deployment} disabled={disabled}/>
+            <Environment deployment={deployment} disabled={disabled}/>
         </div>
     )
+    function PortSettings(props) {
+        var internalPort = props.deployment.internalPort;
+        var externalPort = props.deployment.externalPort;
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Port Mappings</h3>
+                <Input type="number" defaultValue={props.deployment.internalPort} placeholder="Internal Port" onChange={(e, d) => internalPort=d.value}/>
+                <Icon name="arrow right" style={{marginLeft: "10px"}}/>
+                <Input type="number" defaultValue={props.deployment.externalPort} placeholder="External Port" onChange={(e, d) => externalPort=d.value}/>
+                <br></br>
+                <br></br>
+                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&internalPort=${internalPort}&externalPort=${externalPort}&action=updatePort`);
+                    results = await results.json();
+                    if (results.error) alert(results.error);
+                    else {
+                        alert(results.data);
+                        window.location.reload();
+                    }
+                }} />
+            </div>
+        )
+    } 
+    function Name(props) {
+        var name = props.deployment.name;
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Deployment Name</h3>
+                <Input defaultValue={props.deployment.name} placeholder="Name" onChange={(e, d) => name=d.value}/>
+                <br></br>
+                <br></br>
+                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&name=${name}&action=updateName`);
+                    results = await results.json();
+                    if (results.error) alert(results.error);
+                    else {
+                        alert(results.data);
+                        window.location.reload();
+                    }
+                }} />
+            </div>
+        )
+    }
+    function Environment(props) {
+        var memory = props.deployment.memory;
+        var nodeVersion = props.deployment.nodeVersion;
+        var runCmd = props.deployment.runCmd;
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Deployment Environment</h3>
+                <Input defaultValue={props.deployment.memory} placeholder="Memory" onChange={(e, d) => memory=d.value} label="Memory (MB)"/>
+                <br></br>
+                <br></br>
+                <Input defaultValue={props.deployment.nodeVersion} placeholder="Node Image" onChange={(e, d) => nodeVersion=d.value} label="NodeJS Image"/>
+                <br></br>
+                <br></br>
+                <Input defaultValue={props.deployment.runCmd} placeholder="Run Command" onChange={(e, d) => runCmd=d.value} label="npm run "/>
+                <br></br>
+                <br></br>
+                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&memory=${memory}&nodeVersion=${nodeVersion}&runCmd=${runCmd}&action=updateEnvironment`);
+                    results = await results.json();
+                    if (results.error) alert(results.error);
+                    else {
+                        alert(results.data);
+                        window.location.reload();
+                    }
+                }} />
+            </div>
+        )
+    }
 }
 
 function getCachedAuth() {
@@ -362,4 +455,9 @@ function normalizeBytes(bytes) {
     } else {
         return (bytes / 1024 / 1024 / 1024).toFixed(2) + " GB"
     }
+}
+async function getLoginInfo() {
+    const res = await fetch(`/api/user?auth=${getCachedAuth()}`);
+    const data = await res.json()
+    return data;
 }

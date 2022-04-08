@@ -54,3 +54,8 @@
 .console span {
     display: block;
 }
+.settingsSection {
+    padding-bottom: 10px;
+    border-bottom: 1px solid white;
+    margin-bottom: 40px;
+}
