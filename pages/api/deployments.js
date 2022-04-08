@@ -4,7 +4,6 @@ var osu = require('node-os-utils')
 const itob = require("istextorbinary")
 import { IncomingForm } from 'formidable'
 const extract = require('extract-zip')
-var mv = require('mv');
 
 export const config = {
     api: {

@@ -126,6 +126,9 @@ app.prepare().then(() => {
       name: `nds-container-${id}`,
       ExposedPorts: {
         [`${deployment.internalPort}/${deployment.externalPort}`]: {}
+      },
+      HostConfig: {
+        Memory: deployment.memory * 1024 * 1024
       }
     }, function (err, container) {
       if (err) {
@@ -153,6 +156,44 @@ app.prepare().then(() => {
   })
   server.get("/api/deployment/buildLog", buildEventsHandler)
   server.get("/api/deployment/runLogs", runEventsHandler)
+  server.get("/api/deployment/oldRunLogs", async (req, res) => {
+    let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+    if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+    if (!config.auth_secret_key) {
+      let authkey = crypto.randomBytes(32).toString("hex");
+      config.auth_secret_key = authkey;
+      fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+    }
+    var user = null;
+    for (let i in config.authorized_users) {
+      let testUser = config.authorized_users[i];
+      let hash = crypto.createHash('sha256');
+      let userkey = hash.update(testUser.username);
+      userkey = hash.update(testUser.password);
+      userkey = hash.update(config.auth_secret_key);
+      if (!req.query.auth) req.query.auth
+      if (userkey.digest('hex') === req.query.auth) {
+        user = testUser
+        break;
+      }
+    }
+    if (user === null) return res.send({ error: "Invalid authkey" });
+    let id = req.query.id;
+    let deployment = config.deployments.find(d => d.id === id);
+    if (!deployment) return res.send({ error: "Deployment not found!" });
+
+    var container = docker.getContainer(`nds-container-${id}`);
+    let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
+    logs = logs.toString();
+    logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
+    logs = logs.replace(/\u0001/g, "")
+    logs = logs.replace(/\u0000/g, "")
+    logs = logs.replace(/\u0016/g, "")
+    logs = logs.replace(/\u0010/g, "")
+    logs = logs.replace(/\u0007/g)
+    return res.send({ data: logs });
+
+  })
 
   server.all('*', (req, res) => {
     return handle(req, res)
@@ -174,7 +215,7 @@ runScript('./garbageManager.js', function (err) {
 function sendEventsToAll(text, clients) {
   clients.forEach(client => client.response.write(`data: ${text}\n\n`))
 }
-async function runEventsHandler(request, response, next) {
+function runEventsHandler(request, response, next) {
   var req = request;
   var res = response;
   let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
@@ -209,42 +250,29 @@ async function runEventsHandler(request, response, next) {
   };
   response.writeHead(200, headers);
 
-  const data = `data: Successfully established write stream with server\n\n`;
+  const data = `data: \\033[0;34m >>>>> Successfully loaded logs not from this session (Logs below are real time) <<<<<\\033[0m\n\n`;
 
   response.write(data);
 
+  const clientId = Date.now();
+
+  const newClient = {
+    id: clientId,
+    response
+  };
+
 
   var container = docker.getContainer(`nds-container-${id}`);
-  var logs = await container.logs({ stdout: true, stderr: true, follow: true })
-  logs.on("data", function (log) {
-    response.write(`data: ${log}\n\n`);
+  container.logs({ stdout: true, stderr: true, follow: true, tail: 1 }).then(logs => {
+    logs.on("data", function (log) {
+      log = log.toString();
+      response.write(`data: ${log}\n\n`);
+    })
   })
-}
-function zipDirectory(sourceDir, outPath) {
-  const archive = archiver('zip', { zlib: { level: 9 } });
-  const stream = fs.createWriteStream(outPath);
 
-  return new Promise((resolve, reject) => {
-    archive
-      .directory(sourceDir, false)
-      .on('error', err => reject(err))
-      .pipe(stream)
-      ;
-
-    stream.on('close', () => resolve());
-    archive.finalize();
+  request.on('close', () => {
+    console.log(`${clientId} Connection closed`);
   });
-}
-function convertZipToTar(sourceFile, outFile) {
-  const tar = fs.createWriteStream(outFile);
-  return new Promise((resolve, reject) => {
-    zipToTar(sourceFile, { progress: false })
-      .on('file', console.log)
-      .on('error', reject)
-      .getStream()
-      .pipe(tar)
-      .on('finish', resolve);
-  })
 }
 function buildEventsHandler(request, response, next) {
   var req = request;
@@ -302,8 +330,34 @@ function buildEventsHandler(request, response, next) {
     buildListeners[id] = buildListeners[id].filter(client => client.id !== clientId);
   });
 }
-String.prototype.replaceAll = function (find, replace){
-  var regex = new RegExp(find,'g');
+function zipDirectory(sourceDir, outPath) {
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const stream = fs.createWriteStream(outPath);
+
+  return new Promise((resolve, reject) => {
+    archive
+      .directory(sourceDir, false)
+      .on('error', err => reject(err))
+      .pipe(stream)
+      ;
+
+    stream.on('close', () => resolve());
+    archive.finalize();
+  });
+}
+function convertZipToTar(sourceFile, outFile) {
+  const tar = fs.createWriteStream(outFile);
+  return new Promise((resolve, reject) => {
+    zipToTar(sourceFile, { progress: false })
+      .on('file', console.log)
+      .on('error', reject)
+      .getStream()
+      .pipe(tar)
+      .on('finish', resolve);
+  })
+}
+String.prototype.replaceAll = function (find, replace) {
+  var regex = new RegExp(find, 'g');
   return this.replace(regex, replace)
 }
 

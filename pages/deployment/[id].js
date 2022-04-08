@@ -288,7 +288,13 @@ function Console() {
     return (
         <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
     )
-    function initEventStream(){
+    async function initEventStream(){
+        let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
+        oldLogs = await oldLogs.json();
+        if (oldLogs.data) {
+            let logs = oldLogs.data.split("\n")
+            logs.forEach(l => newLog(l))
+        }
         var evtSource = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
         evtSource.onmessage = function (e) {
             console.log(e.data)
@@ -296,6 +302,13 @@ function Console() {
         }
     }
     function newLog(log) {
+        log = log.toString();
+        log = log.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
+        log = log.replace(/\u0001/g, "")
+        log = log.replace(/\u0000/g, "")
+        log = log.replace(/\u0016/g, "")
+        log = log.replace(/\u0010/g, "")
+        log = log.replace(/\u0007/g)
         setConsole(dconsole => [...dconsole, log]);
     }
 }
