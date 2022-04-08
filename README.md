@@ -1,5 +1,13 @@
 ## Node Deployment Server
 
+### Table of Contents
+ - [Description](#description)
+ - [Features](#features)
+ - [Setup](#setup)
+ - [Config File](#nds_configjson)
+ - [Deployment](#deployment)
+
+
 ### Description
 As the name suggests, NDS is a quick and easy platform where users can create their own "cloud" and easily deploy, manage, and update their Node.JS webapps. NDS is powered by Docker.
 
