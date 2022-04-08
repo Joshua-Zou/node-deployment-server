@@ -183,15 +183,19 @@ app.prepare().then(() => {
     if (!deployment) return res.send({ error: "Deployment not found!" });
 
     var container = docker.getContainer(`nds-container-${id}`);
-    let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
-    logs = logs.toString();
-    logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
-    logs = logs.replace(/\u0001/g, "")
-    logs = logs.replace(/\u0000/g, "")
-    logs = logs.replace(/\u0016/g, "")
-    logs = logs.replace(/\u0010/g, "")
-    logs = logs.replace(/\u0007/g)
-    return res.send({ data: logs });
+    try {
+      let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
+      logs = logs.toString();
+      logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
+      logs = logs.replace(/\u0001/g, "")
+      logs = logs.replace(/\u0000/g, "")
+      logs = logs.replace(/\u0016/g, "")
+      logs = logs.replace(/\u0010/g, "")
+      logs = logs.replace(/\u0007/g)
+      return res.send({ data: logs });
+    } catch (err) {
+      return res.send({data: ""})
+    }
 
   })
 
@@ -268,6 +272,8 @@ function runEventsHandler(request, response, next) {
       log = log.toString();
       response.write(`data: ${log}\n\n`);
     })
+  }).catch(err => {
+    response.write(`data: Deployment has not been deployed yet!\n\n`);
   })
 
   request.on('close', () => {

@@ -21,11 +21,14 @@ async function main(){
         // status updater
         let deployments = config.deployments || [];
         deployments.forEach(deployment => {
+            let deploymentFolder = "./deployments/"+deployment.id;
+            fs.existsSync(deploymentFolder) || fs.mkdirSync(deploymentFolder);
+
             var container = docker.getContainer(`nds-container-${deployment.id}`);
             container.inspect((err, data) => {
-                if (err) return;
+                if (err) deployment.status = "waiting for initialization"
+                else deployment.status = data.State.Status;
                 let deploymentIndex = config.deployments.findIndex(d => d.id === deployment.id);
-                deployment.status = data.State.Status;
                 config.deployments[deploymentIndex] = deployment;
                 fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
             })

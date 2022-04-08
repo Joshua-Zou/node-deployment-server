@@ -12,7 +12,8 @@ export const config = {
   };
 
 export default async function handler(req, res) {
-    let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+    try {
+        let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
     if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
     if (!config.auth_secret_key) {
         let authkey = crypto.randomBytes(32).toString("hex");
@@ -206,6 +207,9 @@ export default async function handler(req, res) {
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+    }
+    } catch(err) {
+        return res.send({ error: "An internal server error occured!", err: err.toString()});
     }
 }
 String.prototype.replaceAll = function (find, replace){
