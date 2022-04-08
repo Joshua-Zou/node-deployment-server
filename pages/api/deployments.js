@@ -4,6 +4,7 @@ var osu = require('node-os-utils')
 const itob = require("istextorbinary")
 import { IncomingForm } from 'formidable'
 const extract = require('extract-zip')
+var mv = require('mv');
 
 export const config = {
     api: {
@@ -71,12 +72,6 @@ export default async function handler(req, res) {
             nodeVersion: "node:17.8.0-buster"
         })
         fs.mkdirSync("./deployments/"+id);
-        let dockerFile = fs.readFileSync("./deployments/Dockerfile", "utf8");
-        dockerFile = dockerFile.replaceAll("{{NODEVERSIONTEMPLATE}}", "node:17.8.0-buster");
-        dockerFile = dockerFile.replaceAll("{{INTERNALPORTTEMPLATE}}", internalPort);
-        dockerFile = dockerFile.replaceAll("{{DEPLOYMENTIDTEMPLATE}}", id);
-        dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", "start");
-        fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({data: "Deployment created successfully!"});
     } else if (req.query.action === "getDeploymentInformation") {
@@ -141,9 +136,14 @@ export default async function handler(req, res) {
         await extract(zipPath, { dir: global.projectRoot+"/deployments/"+id })
         let folderName = data.files.zip.originalFilename.slice(0, -4);
         console.log(zipPath, folderName)
+
         fs.rmSync(`${global.projectRoot}/deployments/${id}/code`, { recursive: true, force: true });
         fs.renameSync(`${global.projectRoot}/deployments/${id}/${folderName}`, `${global.projectRoot}/deployments/${id}/code`)
         fs.unlinkSync(zipPath)
+        deployment.internalFolderName = folderName;
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
     }
 }

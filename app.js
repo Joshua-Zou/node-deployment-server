@@ -84,6 +84,14 @@ app.prepare().then(() => {
     fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
     try { fs.unlinkSync("./deployments/" + id + "/build.zip") } catch (e) { }
     try { fs.unlinkSync("./deployments/" + id + "/build.tar") } catch (e) { }
+    sendSSE("Updating Dockerfile...");
+    let dockerFile = fs.readFileSync("./deployments/Dockerfile", "utf8");
+    dockerFile = dockerFile.replaceAll("{{NODEVERSIONTEMPLATE}}", deployment.nodeVersion);
+    dockerFile = dockerFile.replaceAll("{{INTERNALPORTTEMPLATE}}", deployment.internalPort);
+    dockerFile = dockerFile.replaceAll("{{DEPLOYMENTIDTEMPLATE}}", id);
+    dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", deployment.runCmd);
+    dockerFile = dockerFile.replaceAll("{{FOLDERNAME}}", deployment.internalFolderName);
+    fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
 
     sendSSE("Creating tarball...")
     await zipDirectory("./deployments/" + id, "./deployments/" + id + "/build.zip");
@@ -294,3 +302,8 @@ function buildEventsHandler(request, response, next) {
     buildListeners[id] = buildListeners[id].filter(client => client.id !== clientId);
   });
 }
+String.prototype.replaceAll = function (find, replace){
+  var regex = new RegExp(find,'g');
+  return this.replace(regex, replace)
+}
+
