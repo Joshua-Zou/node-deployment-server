@@ -1,34 +1,39 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## Node Deployment Server
 
-## Getting Started
+### Description
+As the name suggests, NDS is a quick and easy platform where users can create their own "cloud" and easily deploy, manage, and update their Node.JS webapps. NDS is powered by Docker.
 
-First, run the development server:
+### Features
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+ - Easily deploy code to a remote server running NDS
+ - Directly upload your code, Git hosting not required!
+ - Create resource limits on individiual deployments
+ - Easily change port mappings
+ - Easily change deployment node versions
+ - Set different permissions for different users (admin, read/write, readonly)
+ - All this can be done from the webapp!
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Setup
+Installing NDS is extremely simple. All you need installed on your system is Docker and a Node LTS version, preferably version 14 or higher.
+ 1. Grab the latest release from Github, and download the zip file
+ 2. Extract the zip file
+ 3. Navigate to the zip file in terminal, and run `npm install` to install the required dependencies
+ 4. Everything's all set! Running `npm run start` will start the server on port 3100, (configurable)
+ 5. Navigate to the server in your browser, and enter your credentials. (Defaults are `username: admin` `password: password`
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+### nds_config.json
+This file describes all of the settings that NDS uses, like authorized users, ports, deployments, and authorization keys. Many of these can edited directly in the webapp if the user has the `admin` privilege.
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+### Deployment
+Deploying is easy! 
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+ 1. Navigate to the dashboard and click "New Deployment"
+ 2. Enter the deployment's name, port mappings, and memory. (All this can be changed at any point)
+ 3. Move to the `deploy` tab, and upload your code in a zip file. 
+**Important:** The folder containing your deployment MUST contain a `package.json` file in its highest directory. See below for examples
+**Do this:**
+![image](https://user-images.githubusercontent.com/77520157/162546470-a37c80f1-da96-489b-acea-33799b484596.png)
+**Not this:**
+![image](https://user-images.githubusercontent.com/77520157/162546496-1c2e30e2-d39d-4395-a555-5c04ccbe47e8.png)
+ 4. After uploading your code, you can navigate to the `explore` tab to preview your files before deploying
+ 5. Move to the `deploy` tab and hit `deploy`! 
