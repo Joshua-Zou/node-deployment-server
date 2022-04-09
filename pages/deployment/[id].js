@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Segment } from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment, Radio } from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -354,6 +354,7 @@ function Settings() {
             <PortSettings deployment={deployment} disabled={disabled} />
             <Name deployment={deployment} disabled={disabled} />
             <Environment deployment={deployment} disabled={disabled} />
+            <ContainerSettings deployment={deployment} disabled={disabled} />
             <DeploymentActions deployment={deployment} disabled={disabled} />
         </div>
     )
@@ -428,6 +429,27 @@ function Settings() {
             </div>
         )
     }
+    function ContainerSettings(props) {
+        var startContainerOnStartup = props.deployment.startContainerOnStartup;
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Container Settings</h3>
+                <span style={{verticalAlign: "top", fontWeight: "bold", marginRight: "10px"}}>Start Deployment on Computer Startup</span>
+                <Radio toggle defaultChecked={props.deployment.startContainerOnStartup} onChange={(e, d) => startContainerOnStartup = d.checked} />
+                <br></br>
+                <br></br>
+                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&startContainerOnStartup=${startContainerOnStartup}&action=updateContainerSettings`);
+                    results = await results.json();
+                    if (results.error) alert(results.error);
+                    else {
+                        alert(results.data);
+                        window.location.reload();
+                    }
+                }} />
+            </div>
+        )
+    }
     function DeploymentActions(props) {
         const router = useRouter();
         return (
@@ -443,7 +465,7 @@ function Settings() {
                 }}>
                     Restart Deployment
                 </Button>
-                <Button inverted color='red' style={{marginLeft: "15px"}} onClick={() => {
+                <Button inverted color='red' style={{ marginLeft: "15px" }} onClick={() => {
                     fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=delete`).then(res => res.json()).then(json => {
                         if (json.error) alert(json.error);
                         else {

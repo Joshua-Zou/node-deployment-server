@@ -116,11 +116,16 @@ app.prepare().then(() => {
 
     // STARTING
     var container = docker.getContainer(`nds-container-${id}`);
-    try {
-      await container.stop()
-      await container.remove()
-    } catch (err) { }
+    for (let i = 0; i<3; i++) {
+      try {
+        await container.stop()
+        await container.remove()
+        break;
+      } catch (err) { }
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
+    let restartPolicy = {false: "", true: "unless-stopped"}
     docker.createContainer({
       Image: `nds-deployment-${id}`,
       name: `nds-container-${id}`,
@@ -128,7 +133,10 @@ app.prepare().then(() => {
         [`${deployment.internalPort}/${deployment.externalPort}`]: {}
       },
       HostConfig: {
-        Memory: deployment.memory * 1024 * 1024
+        Memory: deployment.memory * 1024 * 1024,
+        RestartPolicy: {
+          Name: restartPolicy[deployment.startContainerOnStartup],
+        }
       }
     }, function (err, container) {
       if (err) {

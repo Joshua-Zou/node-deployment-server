@@ -69,7 +69,8 @@ export default async function handler(req, res) {
             id: id,
             status: "waiting for initialization",
             runCmd: "start",
-            nodeVersion: "node:17.8.0-buster"
+            nodeVersion: "node:17.8.0-buster",
+            startContainerOnStartup: true
         })
         fs.mkdirSync("./deployments/"+id);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -204,6 +205,16 @@ export default async function handler(req, res) {
         deployment.memory = memory;
         deployment.nodeVersion = nodeVersion;
         deployment.runCmd = runCmd;
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "updateContainerSettings") {
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        req.query.startContainerOnStartup = req.query.startContainerOnStartup === "true";
+        deployment.startContainerOnStartup = req.query.startContainerOnStartup;
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
