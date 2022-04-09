@@ -6,6 +6,7 @@
  - [Setup](#setup)
  - [Config File](#nds_configjson)
  - [Deployment](#deployment)
+ - [Deployment Settings](#deployment-settings)
 
 
 ### Description
@@ -45,3 +46,23 @@ Deploying is easy!
 ![image](https://user-images.githubusercontent.com/77520157/162546496-1c2e30e2-d39d-4395-a555-5c04ccbe47e8.png)
  4. After uploading your code, you can navigate to the `explore` tab to preview your files before deploying
  5. Move to the `deploy` tab and hit `deploy`! 
+
+
+### Deployment Settings
+ **Port Mappings**\
+ This allows you to expose ports from inside the deployment, and map them into external ports.  \
+ External port must be different across different deployments.\
+ `Internal port` - Integer (0-65535)  \
+ `External port` - Integer (0-65535)  \
+ *Requires re-deploy to apply changes*\
+ <br>
+ **Deployment Name**\
+ This allows you to change the visible deployment name. This is purely cosmetic and does not change anything\
+ `Name` - String\
+ *Does not require re-deploy to apply changes*\
+ <br>
+**Deployment Environment**\
+`Memory`: Integer (min: 512). In MB\
+`NodeJS Image`: String - A valid, public NodeJS base image from the [Docker Registry](https://hub.docker.com/_/node)  \
+`Start Command`: String - the NPM command that gets run when deployment boots.   \
+*Requires re-deploy to apply changes*  
