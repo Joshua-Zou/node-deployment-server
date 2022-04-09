@@ -1,12 +1,12 @@
 {
   "name": "node-deployment-server",
-  "version": "0.1.0",
-  "private": true,
+  "private": false,
   "scripts": {
     "dev": "node app.js --dev",
     "build": "next build",
     "start": "node app.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "update-config": "node ./.update_config/update.js"
   },
   "dependencies": {
     "ansi-to-react": "^6.1.6",

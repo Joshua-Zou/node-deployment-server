@@ -1,5 +1,8 @@
 const fs = require("fs");
 var Docker = require("dockerode");
+const currentConfigFileVersion = 1;
+
+
 
 var docker = new Docker();
 
@@ -52,6 +55,16 @@ async function main() {
     }
 }
 main();
+checkConfigFile();
+
+
+function checkConfigFile() {
+    let config = JSON.parse(fs.readFileSync("./nds_config.json"));
+    let configFileVersion = config.configFileVersion;
+    if (configFileVersion !== currentConfigFileVersion) {
+        throw "The config file's version is not up to date. Please update the config file by running the command: npm run update-config"
+    }
+}
 
 
 function sleep(ms) {

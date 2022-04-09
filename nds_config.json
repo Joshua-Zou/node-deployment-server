@@ -6,5 +6,6 @@
             "permission": "admin"
         }
     ],
-    "port": 3100
+    "port": 3100,
+    "configFileVersion": 1
 }
