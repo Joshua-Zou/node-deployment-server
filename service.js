@@ -54,9 +54,9 @@ async function main() {
         await sleep(60000);
     }
 }
+
 main();
 checkConfigFile();
-
 
 function checkConfigFile() {
     let config = JSON.parse(fs.readFileSync("./nds_config.json"));
@@ -65,7 +65,6 @@ function checkConfigFile() {
         throw "The config file's version is not up to date. Please update the config file by running the command: npm run update-config"
     }
 }
-
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

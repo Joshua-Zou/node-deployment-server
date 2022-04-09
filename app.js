@@ -16,7 +16,8 @@ var docker = new Docker();
 global.docker = docker;
 global.projectRoot = __dirname;
 
-
+const server = express()
+var httpServer = null;
 var buildListeners = {};
 
 function runScript(scriptPath, callback) {
@@ -35,193 +36,214 @@ function runScript(scriptPath, callback) {
   });
 
 }
-app.prepare().then(() => {
-  const server = express()
 
-  server.get("/mode-json.js", (req, res) => {
-    const file = fs.readFileSync("./node_modules/ace-builds/src-noconflict/mode-json.js", "utf8")
-    res.setHeader("Content-Type", "application/javascript")
-    res.end(file)
-  })
-  server.post("/api/deployment/deploy", async (req, res) => {
-    let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
-    if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
-    if (!config.auth_secret_key) {
-      let authkey = crypto.randomBytes(32).toString("hex");
-      config.auth_secret_key = authkey;
-      fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-    }
-    var user = null;
-    for (let i in config.authorized_users) {
-      let testUser = config.authorized_users[i];
-      let hash = crypto.createHash('sha256');
-      let userkey = hash.update(testUser.username);
-      userkey = hash.update(testUser.password);
-      userkey = hash.update(config.auth_secret_key);
-      if (!req.query.auth) req.query.auth
-      if (userkey.digest('hex') === req.query.auth) {
-        user = testUser
-        break;
-      }
-    }
-    if (user === null) return res.send({ error: "Invalid authkey" });
-    if (user.permission !== "admin" && user.permission !== "readwrite") return res.send({ error: "User does not have adequate permissions to complete this action!" });
-    let id = req.query.id;
-    let deployment = config.deployments.find(d => d.id === id);
-    if (!deployment) return res.send({ error: "Deployment not found!" });
 
-    let deploymentIndex = config.deployments.findIndex(d => d.id === id);
 
-    // BUILDING
-    function sendSSE(text) {
-      if (!buildListeners[id]) return;
-      sendEventsToAll(text, buildListeners[id]);
-    }
-    res.send({ data: "deployment started" });
-    deployment.status = "building";
-    config.deployments[deploymentIndex] = deployment;
-    sendSSE("Starting to build deployment...")
-    fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-    try { fs.unlinkSync("./deployments/" + id + "/build.zip") } catch (e) { }
-    try { fs.unlinkSync("./deployments/" + id + "/build.tar") } catch (e) { }
-    sendSSE("Updating Dockerfile...");
-    let dockerFile = fs.readFileSync("./deployments/Dockerfile", "utf8");
-    dockerFile = dockerFile.replaceAll("{{NODEVERSIONTEMPLATE}}", deployment.nodeVersion);
-    dockerFile = dockerFile.replaceAll("{{INTERNALPORTTEMPLATE}}", deployment.internalPort);
-    dockerFile = dockerFile.replaceAll("{{DEPLOYMENTIDTEMPLATE}}", id);
-    dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", deployment.runCmd);
-    dockerFile = dockerFile.replaceAll("{{FOLDERNAME}}", deployment.internalFolderName);
-    fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
+function main() {
+  app.prepare().then(() => {
 
-    sendSSE("Creating tarball...")
-    await zipDirectory("./deployments/" + id, "./deployments/" + id + "/build.zip");
-    console.log("zipped directory!");
-    await convertZipToTar("./deployments/" + id + "/build.zip", "./deployments/" + id + "/build.tar");
-    console.log("converted zip to tar!");
-    sendSSE("Finished tarball creation. Starting to build docker image...")
-    var buildStream = await docker.buildImage("./deployments/" + id + "/build.tar", { t: "nds-deployment-" + id });
-    buildStream.pipe(process.stdout)
-    buildStream.on('data', function (e) {
-      sendSSE(e.toString());
+    server.get("/mode-json.js", (req, res) => {
+      const file = fs.readFileSync("./node_modules/ace-builds/src-noconflict/mode-json.js", "utf8")
+      res.setHeader("Content-Type", "application/javascript")
+      res.end(file)
     })
-    await new Promise((resolve, reject) => {
-      docker.modem.followProgress(buildStream, (err, res) => err ? reject(err) : resolve(res));
-    });
-    docker.pruneImages()
-    docker.pruneContainers()
-    deployment.status = "starting";
-    config.deployments[deploymentIndex] = deployment;
-    fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-    sendSSE("Finished building docker image. Starting container... Switch over to the Console tab to see the application logs.")
-
-    // STARTING
-    var container = docker.getContainer(`nds-container-${id}`);
-    for (let i = 0; i<3; i++) {
-      try {
-        await container.stop()
-        await container.remove()
-        break;
-      } catch (err) { }
-    }
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    let restartPolicy = {false: "", true: "unless-stopped"}
-    docker.createContainer({
-      Image: `nds-deployment-${id}`,
-      name: `nds-container-${id}`,
-      ExposedPorts: {
-        [`${deployment.internalPort}/${deployment.externalPort}`]: {}
-      },
-      HostConfig: {
-        Memory: deployment.memory * 1024 * 1024,
-        RestartPolicy: {
-          Name: restartPolicy[deployment.startContainerOnStartup],
+    server.post("/api/deployment/deploy", async (req, res) => {
+      let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+      if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+      if (!config.auth_secret_key) {
+        let authkey = crypto.randomBytes(32).toString("hex");
+        config.auth_secret_key = authkey;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+      }
+      var user = null;
+      for (let i in config.authorized_users) {
+        let testUser = config.authorized_users[i];
+        let hash = crypto.createHash('sha256');
+        let userkey = hash.update(testUser.username);
+        userkey = hash.update(testUser.password);
+        userkey = hash.update(config.auth_secret_key);
+        if (!req.query.auth) req.query.auth
+        if (userkey.digest('hex') === req.query.auth) {
+          user = testUser
+          break;
         }
       }
-    }, function (err, container) {
-      if (err) {
-        sendSSE("Error starting container: " + err.toString());
-        deployment.status = "failed to start";
-        config.deployments[deploymentIndex] = deployment;
-        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        return;
+      if (user === null) return res.send({ error: "Invalid authkey" });
+      if (user.permission !== "admin" && user.permission !== "readwrite") return res.send({ error: "User does not have adequate permissions to complete this action!" });
+      let id = req.query.id;
+      let deployment = config.deployments.find(d => d.id === id);
+      if (!deployment) return res.send({ error: "Deployment not found!" });
+  
+      let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+  
+      // BUILDING
+      function sendSSE(text) {
+        if (!buildListeners[id]) return;
+        sendEventsToAll(text, buildListeners[id]);
       }
-      container.start(function (err, data) {
+      res.send({ data: "deployment started" });
+      deployment.status = "building";
+      config.deployments[deploymentIndex] = deployment;
+      sendSSE("Starting to build deployment...")
+      fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+      try { fs.unlinkSync("./deployments/" + id + "/build.zip") } catch (e) { }
+      try { fs.unlinkSync("./deployments/" + id + "/build.tar") } catch (e) { }
+      sendSSE("Updating Dockerfile...");
+      let dockerFile = fs.readFileSync("./deployments/Dockerfile", "utf8");
+      dockerFile = dockerFile.replaceAll("{{NODEVERSIONTEMPLATE}}", deployment.nodeVersion);
+      dockerFile = dockerFile.replaceAll("{{INTERNALPORTTEMPLATE}}", deployment.internalPort);
+      dockerFile = dockerFile.replaceAll("{{DEPLOYMENTIDTEMPLATE}}", id);
+      dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", deployment.runCmd);
+      dockerFile = dockerFile.replaceAll("{{FOLDERNAME}}", deployment.internalFolderName);
+      fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
+  
+      sendSSE("Creating tarball...")
+      await zipDirectory("./deployments/" + id, "./deployments/" + id + "/build.zip");
+      console.log("zipped directory!");
+      await convertZipToTar("./deployments/" + id + "/build.zip", "./deployments/" + id + "/build.tar");
+      console.log("converted zip to tar!");
+      sendSSE("Finished tarball creation. Starting to build docker image...")
+      var buildStream = await docker.buildImage("./deployments/" + id + "/build.tar", { t: "nds-deployment-" + id });
+      buildStream.pipe(process.stdout)
+      buildStream.on('data', function (e) {
+        sendSSE(e.toString());
+      })
+      await new Promise((resolve, reject) => {
+        docker.modem.followProgress(buildStream, (err, res) => err ? reject(err) : resolve(res));
+      });
+      docker.pruneImages()
+      docker.pruneContainers()
+      deployment.status = "starting";
+      config.deployments[deploymentIndex] = deployment;
+      fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+      sendSSE("Finished building docker image. Starting container... Switch over to the Console tab to see the application logs.")
+  
+      // STARTING
+      var container = docker.getContainer(`nds-container-${id}`);
+      for (let i = 0; i<3; i++) {
+        try {
+          await container.stop()
+          await container.remove()
+          break;
+        } catch (err) { }
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      let restartPolicy = {false: "", true: "unless-stopped"}
+      docker.createContainer({
+        Image: `nds-deployment-${id}`,
+        name: `nds-container-${id}`,
+        ExposedPorts: {
+          [`${deployment.internalPort}/${deployment.externalPort}`]: {}
+        },
+        HostConfig: {
+          Memory: deployment.memory * 1024 * 1024,
+          RestartPolicy: {
+            Name: restartPolicy[deployment.startContainerOnStartup],
+          }
+        }
+      }, function (err, container) {
         if (err) {
           sendSSE("Error starting container: " + err.toString());
           deployment.status = "failed to start";
           config.deployments[deploymentIndex] = deployment;
           fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        } else {
-          deployment.status = "running";
-          config.deployments[deploymentIndex] = deployment;
-          fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+          return;
         }
+        container.start(function (err, data) {
+          if (err) {
+            sendSSE("Error starting container: " + err.toString());
+            deployment.status = "failed to start";
+            config.deployments[deploymentIndex] = deployment;
+            fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+          } else {
+            deployment.status = "running";
+            config.deployments[deploymentIndex] = deployment;
+            fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+          }
+        });
       });
-    });
-
-
-  })
-  server.get("/api/deployment/buildLog", buildEventsHandler)
-  server.get("/api/deployment/runLogs", runEventsHandler)
-  server.get("/api/deployment/oldRunLogs", async (req, res) => {
-    let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
-    if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
-    if (!config.auth_secret_key) {
-      let authkey = crypto.randomBytes(32).toString("hex");
-      config.auth_secret_key = authkey;
-      fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-    }
-    var user = null;
-    for (let i in config.authorized_users) {
-      let testUser = config.authorized_users[i];
-      let hash = crypto.createHash('sha256');
-      let userkey = hash.update(testUser.username);
-      userkey = hash.update(testUser.password);
-      userkey = hash.update(config.auth_secret_key);
-      if (!req.query.auth) req.query.auth
-      if (userkey.digest('hex') === req.query.auth) {
-        user = testUser
-        break;
+  
+  
+    })
+    server.get("/api/deployment/buildLog", buildEventsHandler)
+    server.get("/api/deployment/runLogs", runEventsHandler)
+    server.get("/api/deployment/oldRunLogs", async (req, res) => {
+      let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+      if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+      if (!config.auth_secret_key) {
+        let authkey = crypto.randomBytes(32).toString("hex");
+        config.auth_secret_key = authkey;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
       }
+      var user = null;
+      for (let i in config.authorized_users) {
+        let testUser = config.authorized_users[i];
+        let hash = crypto.createHash('sha256');
+        let userkey = hash.update(testUser.username);
+        userkey = hash.update(testUser.password);
+        userkey = hash.update(config.auth_secret_key);
+        if (!req.query.auth) req.query.auth
+        if (userkey.digest('hex') === req.query.auth) {
+          user = testUser
+          break;
+        }
+      }
+      if (user === null) return res.send({ error: "Invalid authkey" });
+      let id = req.query.id;
+      let deployment = config.deployments.find(d => d.id === id);
+      if (!deployment) return res.send({ error: "Deployment not found!" });
+  
+      var container = docker.getContainer(`nds-container-${id}`);
+      try {
+        let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
+        logs = logs.toString();
+        logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
+        logs = logs.replace(/\u0001/g, "")
+        logs = logs.replace(/\u0000/g, "")
+        logs = logs.replace(/\u0016/g, "")
+        logs = logs.replace(/\u0010/g, "")
+        logs = logs.replace(/\u0007/g)
+        return res.send({ data: logs });
+      } catch (err) {
+        return res.send({data: ""})
+      }
+  
+    })
+  
+    server.all('*', (req, res) => {
+      return handle(req, res)
+    })
+  
+    httpServer = server.listen(port, (err) => {
+      if (err) throw err
+      console.log(`> Ready on http://localhost:${port}`)
+    })
+  })
+  
+  runScript('./service.js', function (err) {
+    console.log('Service Worker process ended unexpectedly!');
+    if (err) {
+      throw err
+    } else {
+      console.log("Restarting server in 10 seconds...")
+      restartServer();
     }
-    if (user === null) return res.send({ error: "Invalid authkey" });
-    let id = req.query.id;
-    let deployment = config.deployments.find(d => d.id === id);
-    if (!deployment) return res.send({ error: "Deployment not found!" });
-
-    var container = docker.getContainer(`nds-container-${id}`);
-    try {
-      let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
-      logs = logs.toString();
-      logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
-      logs = logs.replace(/\u0001/g, "")
-      logs = logs.replace(/\u0000/g, "")
-      logs = logs.replace(/\u0016/g, "")
-      logs = logs.replace(/\u0010/g, "")
-      logs = logs.replace(/\u0007/g)
-      return res.send({ data: logs });
-    } catch (err) {
-      return res.send({data: ""})
-    }
-
-  })
-
-  server.all('*', (req, res) => {
-    return handle(req, res)
-  })
-
-  server.listen(port, (err) => {
-    if (err) throw err
-    console.log(`> Ready on http://localhost:${port}`)
-  })
-})
-
-runScript('./service.js', function (err) {
-  if (err) throw err;
-  console.log('Service Worker process ended unexpectedly!');
-});
-
+  });
+  function restartServer(){
+        setTimeout(function () {
+            process.on("exit", function () {
+                require("child_process").spawn(process.argv.shift(), process.argv, {
+                    cwd: process.cwd(),
+                    detached: true,
+                    stdio: "inherit"
+                });
+            });
+            process.exit();
+        }, 10000);
+  }
+}
+main();
 
 
 function sendEventsToAll(text, clients) {
