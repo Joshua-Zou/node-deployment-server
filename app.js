@@ -73,9 +73,9 @@ function main() {
       let id = req.query.id;
       let deployment = config.deployments.find(d => d.id === id);
       if (!deployment) return res.send({ error: "Deployment not found!" });
-  
+
       let deploymentIndex = config.deployments.findIndex(d => d.id === id);
-  
+
       // BUILDING
       function sendSSE(text) {
         if (!buildListeners[id]) return;
@@ -96,17 +96,25 @@ function main() {
       dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", deployment.runCmd);
       dockerFile = dockerFile.replaceAll("{{FOLDERNAME}}", deployment.internalFolderName);
       fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
-  
+
       sendSSE("Creating tarball...")
       await zipDirectory("./deployments/" + id, "./deployments/" + id + "/build.zip");
-      console.log("zipped directory!");
       await convertZipToTar("./deployments/" + id + "/build.zip", "./deployments/" + id + "/build.tar");
-      console.log("converted zip to tar!");
       sendSSE("Finished tarball creation. Starting to build docker image...")
       var buildStream = await docker.buildImage("./deployments/" + id + "/build.tar", { t: "nds-deployment-" + id });
-      buildStream.pipe(process.stdout)
+      //buildStream.pipe(process.stdout)
       buildStream.on('data', function (e) {
-        sendSSE(e.toString());
+        var text = e.toString();
+        let multipleLines = text.split("\n");
+        multipleLines.forEach(line => {
+          try {
+            let json = JSON.parse(line.toString());
+            if (json.stream) line = json.stream
+            sendSSE(line);
+          } catch (err) {
+            sendSSE(line);
+          }
+        })
       })
       await new Promise((resolve, reject) => {
         docker.modem.followProgress(buildStream, (err, res) => err ? reject(err) : resolve(res));
@@ -116,11 +124,11 @@ function main() {
       deployment.status = "starting";
       config.deployments[deploymentIndex] = deployment;
       fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-      sendSSE("Finished building docker image. Starting container... Switch over to the Console tab to see the application logs.")
-  
+      sendSSE("\\033[0;34m Finished building docker image. Starting container... Switch over to the Console tab to see the application logs. \\033[0m")
+
       // STARTING
       var container = docker.getContainer(`nds-container-${id}`);
-      for (let i = 0; i<3; i++) {
+      for (let i = 0; i < 3; i++) {
         try {
           await container.stop()
           await container.remove()
@@ -128,8 +136,8 @@ function main() {
         } catch (err) { }
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
-  
-      let restartPolicy = {false: "", true: "unless-stopped"}
+
+      let restartPolicy = { false: "", true: "unless-stopped" }
       docker.createContainer({
         Image: `nds-deployment-${id}`,
         name: `nds-container-${id}`,
@@ -163,8 +171,8 @@ function main() {
           }
         });
       });
-  
-  
+
+
     })
     server.get("/api/deployment/buildLog", buildEventsHandler)
     server.get("/api/deployment/runLogs", runEventsHandler)
@@ -193,10 +201,10 @@ function main() {
       let id = req.query.id;
       let deployment = config.deployments.find(d => d.id === id);
       if (!deployment) return res.send({ error: "Deployment not found!" });
-  
+
       var container = docker.getContainer(`nds-container-${id}`);
       try {
-        let logs = await container.logs({ stdout: true, stderr: true, tail: 1000})
+        let logs = await container.logs({ stdout: true, stderr: true, tail: 1000 })
         logs = logs.toString();
         logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
         logs = logs.replace(/\u0001/g, "")
@@ -206,21 +214,21 @@ function main() {
         logs = logs.replace(/\u0007/g)
         return res.send({ data: logs });
       } catch (err) {
-        return res.send({data: ""})
+        return res.send({ data: "" })
       }
-  
+
     })
-  
+
     server.all('*', (req, res) => {
       return handle(req, res)
     })
-  
+
     httpServer = server.listen(port, (err) => {
       if (err) throw err
       console.log(`> Ready on http://localhost:${port}`)
     })
   })
-  
+
   runScript('./service.js', function (err) {
     console.log('Service Worker process ended unexpectedly!');
     if (err) {
@@ -230,17 +238,17 @@ function main() {
       restartServer();
     }
   });
-  function restartServer(){
-        setTimeout(function () {
-            process.on("exit", function () {
-                require("child_process").spawn(process.argv.shift(), process.argv, {
-                    cwd: process.cwd(),
-                    detached: true,
-                    stdio: "inherit"
-                });
-            });
-            process.exit();
-        }, 10000);
+  function restartServer() {
+    setTimeout(function () {
+      process.on("exit", function () {
+        require("child_process").spawn(process.argv.shift(), process.argv, {
+          cwd: process.cwd(),
+          detached: true,
+          stdio: "inherit"
+        });
+      });
+      process.exit();
+    }, 10000);
   }
 }
 main();

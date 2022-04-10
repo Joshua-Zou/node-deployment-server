@@ -35,9 +35,7 @@
 .exploreRow {
     cursor: pointer;
 }
-.exploreRow:hover {
-    background-color: #e6e6e6 !important
-}
+
 .deployConsole {
     margin-top: 30px;
 }

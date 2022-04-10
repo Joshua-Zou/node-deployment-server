@@ -78,7 +78,7 @@ function Explore() {
         <div>
             <h3>Explore Deployment Files</h3>
             <span>These files do not reflect changes that your deployment made.</span>
-            <Table celled striped>
+            <Table celled striped selectable>
                 <Table.Header>
                     <Table.Row>
                         <Table.HeaderCell colSpan='3'>{path}
@@ -187,6 +187,7 @@ function Deploy() {
         }
     }, [])
     function newLog(log) {
+        log = unescapejs(log)
         setConsole(dconsole => [...dconsole, log]);
     }
     if (!queried) {
@@ -208,7 +209,6 @@ function Deploy() {
             } else {
                 evtSource.current = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
                 evtSource.current.onmessage = function (e) {
-                    console.log(e.data)
                     newLog(e.data)
                 }
                 setDButton()
@@ -251,12 +251,13 @@ class DeployConsole extends React.Component {
     constructor(props) {
         super(props);
         // // create a ref to store the textInput DOM element
-        this.messagesEnd = React.createRef();
+        this.messageContainer = React.createRef();
         this.scrollToBottom = this.scrollToBottom.bind(this);
     }
     scrollToBottom = () => {
-        if (!this.messagesEnd.current) return;
-        this.messagesEnd.current.scrollIntoView();
+        if (!this.messageContainer.current) return;
+        this.messageContainer.current.scrollTop = this.messageContainer.current.scrollHeight;
+
     }
     componentDidMount() {
         this.scrollToBottom();
@@ -270,19 +271,18 @@ class DeployConsole extends React.Component {
         return (
             <div className={styles.deployConsole}>
                 <h2>{this.props.text}</h2>
-                <div className={styles.console}>
+                <div className={styles.console} ref={this.messageContainer}>
                     {this.props.logs.map((log, index) => {
+                        var element = <Ansi>{log}</Ansi>
+                        //var element = log
                         return (
                             <span key={index}>
-                                <Ansi>
-                                    {unescapejs(log)}
-                                </Ansi>
+                                {
+                                    element
+                                }
                             </span>
                         )
                     })}
-                    <div style={{ float: "left", clear: "both" }}
-                        ref={this.messagesEnd}>
-                    </div>
                 </div>
             </div>
         )
@@ -313,18 +313,14 @@ function Console() {
         }
         consoleStream.current = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
         consoleStream.current.onmessage = function (e) {
-            console.log(e.data)
             newLog(e.data)
         }
     }
     function newLog(log) {
-        log = log.toString();
-        log = log.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
-        log = log.replace(/\u0001/g, "")
-        log = log.replace(/\u0000/g, "")
-        log = log.replace(/\u0016/g, "")
-        log = log.replace(/\u0010/g, "")
-        log = log.replace(/\u0007/g)
+        log = unescapejs(log)
+        log = log.replace(/[\x00-\x08\x0E-\x1F\x7F-\uFFFF]/g, '')
+        log = log.replace(/\[0/g, "\u001b[0")
+        console.log(log)
         setConsole(dconsole => [...dconsole, log]);
     }
 }
