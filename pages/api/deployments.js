@@ -209,6 +209,9 @@ export default async function handler(req, res) {
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
     } else if (req.query.action === "updateContainerSettings") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
         let id = req.query.id;
         let deployment = config.deployments.find(d => d.id === id);
         if (!deployment) return res.send({ error: "Deployment not found!" });
