@@ -192,15 +192,15 @@ export default async function handler(req, res) {
         let memory = req.query.memory;
         let nodeVersion = req.query.nodeVersion;
         let runCmd = req.query.runCmd;
-        if (!(Number(memory) > 512)) return res.send({ error: "Memory must be at least 512MB!" });
+        if (!(Number(memory) > 511)) return res.send({ error: "Memory must be at least 512MB!" });
         if (!runCmd) return res.send({ error: "No run command specified!" });
 
 
         let imageTag = nodeVersion.slice(nodeVersion.indexOf(":")+1);
         let imageName = nodeVersion.slice(0, nodeVersion.indexOf(":"));
-        let image = await fetch(`https://index.docker.io/v1/repositories/${imageName}/tags/${imageTag}`);
-        image = await image.text();
-        if (image.toLowerCase() === "tag not found") return res.send({ error: "Docker image not found on the docker registry!" });
+        let image = await fetch(`https://hub.docker.com/v2/repositories/library/${imageName}/tags/${imageTag}`);
+        image = await image.json();
+        if (image.errinfo) return res.send({ error: "Docker image not found on the docker registry!" });
 
         deployment.memory = memory;
         deployment.nodeVersion = nodeVersion;
