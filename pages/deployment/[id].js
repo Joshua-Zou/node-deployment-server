@@ -21,8 +21,13 @@ export default function Deployment(props) {
     if (id && deployment && !deployment.id) {
         getDeploymentInformation(id).then(data => {
             setDeployment(data)
+            var urlParams = new URLSearchParams(window.location.search);
+            var intialTab = Number(urlParams.get("page") || 0);
+            setTabIndex(intialTab)
+            changeQueryString("")
         })
     }
+
     const [tabIndex, setTabIndex] = useState(0)
     const tabs = [<Explore key="0" />, <Deploy key="1" />, <Console key="2" />, <Settings key="3" />];
     const tabNames = ["Explore", "Deploy", "Console", "Settings"]
@@ -402,7 +407,7 @@ function Settings() {
                     if (results.error) alert(results.error);
                     else {
                         alert(results.data);
-                        window.location.reload()
+                        window.location.search = "?page=3"
                     }
                 }} />
             </div>
@@ -470,7 +475,7 @@ function Settings() {
                         if (json.error) alert(json.error);
                         else {
                             alert(json.data);
-                            window.location.reload();
+                            window.location.search = "?page=3"
                         }
                     })
                 }}>
@@ -599,4 +604,10 @@ async function getLoginInfo() {
     const res = await fetch(`/api/user?auth=${getCachedAuth()}`);
     const data = await res.json()
     return data;
+}
+function changeQueryString(searchString, documentTitle){      
+    documentTitle = typeof documentTitle !== 'undefined' ? documentTitle : document.title;      
+    var urlSplit=( window.location.href ).split( "?" );      
+    var obj = { Title: documentTitle, Url: urlSplit[0] + searchString };      
+    history.pushState(obj, obj.Title, obj.Url);      
 }
