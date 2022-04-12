@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Segment, Radio } from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment, Radio, Checkbox} from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -253,9 +253,11 @@ class DeployConsole extends React.Component {
         // // create a ref to store the textInput DOM element
         this.messageContainer = React.createRef();
         this.scrollToBottom = this.scrollToBottom.bind(this);
+        this.stickToBottom = true
     }
     scrollToBottom = () => {
         if (!this.messageContainer.current) return;
+        if (!this.stickToBottom) return;
         this.messageContainer.current.scrollTop = this.messageContainer.current.scrollHeight;
 
     }
@@ -268,6 +270,7 @@ class DeployConsole extends React.Component {
     }
     render() {
         if (this.props.visible === false) return <div></div>
+        var self = this;
         return (
             <div className={styles.deployConsole}>
                 <h2>{this.props.text}</h2>
@@ -283,6 +286,9 @@ class DeployConsole extends React.Component {
                             </span>
                         )
                     })}
+                </div>
+                <div style={{marginTop: "10px",textAlign: "right"}}>
+                    <Checkbox defaultChecked onChange={(e, d) => self.stickToBottom = d.checked}/> <span style={{verticalAlign: "top"}}>Stick to bottom</span>
                 </div>
             </div>
         )
@@ -302,7 +308,7 @@ function Console() {
         initEventStream();
     }
     return (
-        <DeployConsole visible={true} logs={dconsole} text="Application Logs" />
+        <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
     )
     async function initEventStream() {
         let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
