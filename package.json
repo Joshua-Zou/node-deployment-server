@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "node app.js",
     "lint": "next lint",
-    "update-config": "node ./.update_config/update.js"
+    "update-config": "node ./.update_config/update.js",
+    "generate-release-file": "node release.js"
   },
   "dependencies": {
     "ansi-to-react": "^6.1.6",
