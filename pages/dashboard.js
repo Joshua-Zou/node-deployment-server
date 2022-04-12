@@ -33,7 +33,7 @@ export default function Home() {
 
 function DeploymentList() {
   const router = useRouter()
-  const [deployments, setDeployments] = React.useState([{
+  var [deployments, setDeployments] = React.useState([{
     id: "null",
     name: <Icon name="circle notched" loading/>,
     status: <Icon name="circle notched" loading/>,
@@ -43,9 +43,10 @@ function DeploymentList() {
     runCmd: <Icon name="circle notched" loading/>,
     nodeVersion: <Icon name="circle notched" loading/>
   }]);
-  if (deployments[0] && deployments[0].id === "null") {
+  if (deployments && deployments[0] && deployments[0].id === "null") {
     getDeployments();
   }
+  if (!deployments) deployments = []
   return (
     <Table celled striped>
       <Table.Header>
