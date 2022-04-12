@@ -19,6 +19,7 @@ global.projectRoot = __dirname;
 const server = express()
 var httpServer = null;
 var buildListeners = {};
+var runListeners = {};
 
 function runScript(scriptPath, callback) {
   var invoked = false;
@@ -179,6 +180,58 @@ function main() {
 
 
     })
+    server.post("/api/deployment/exec", async (req, res) => {
+      let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+      if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+      if (!config.auth_secret_key) {
+        let authkey = crypto.randomBytes(32).toString("hex");
+        config.auth_secret_key = authkey;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+      }
+      var user = null;
+      for (let i in config.authorized_users) {
+        let testUser = config.authorized_users[i];
+        let hash = crypto.createHash('sha256');
+        let userkey = hash.update(testUser.username);
+        userkey = hash.update(testUser.password);
+        userkey = hash.update(config.auth_secret_key);
+        if (!req.query.auth) req.query.auth
+        if (userkey.digest('hex') === req.query.auth) {
+          user = testUser
+          break;
+        }
+      }
+      if (user === null) return res.send({ error: "Invalid authkey" });
+      if (user.permission !== "admin" && user.permission !== "readwrite") return res.send({ error: "User does not have adequate permissions to complete this action!" });
+      let id = req.query.id;
+      let deployment = config.deployments.find(d => d.id === id);
+      if (!deployment) return res.send({ error: "Deployment not found!" });
+      if (!req.query.cmd) return res.send({ error: "No command specified!" });
+
+      let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+
+      function sendSSE(text) {
+        if (!runListeners[id]) return;
+        sendEventsToAll(text, runListeners[id])
+      }
+      await new Promise(async (resolve, reject) => {
+        let container = docker.getContainer(`nds-container-${req.query.id}`);
+        container.exec({ Cmd: req.query.cmd.split(" "), AttachStdin: true, AttachStdout: true }, function (err, exec) {
+          if (err) return reject(err);
+          exec.start({ hijack: true, stdin: true }, function (err, stream) {
+            stream.on("data", function(data) {
+              console.log(data.toString());
+              sendSSE("\u123e \u001b[32m"+data.toString());
+            })
+            sendSSE("\u123e \u001b[34m Starting command execution... ")
+          });
+        });
+      }).then(data => {
+        res.send({ data: data });
+      }).catch(err => {
+        res.send({ error: err.toString() });
+      })
+    })
     server.get("/api/deployment/buildLog", buildEventsHandler)
     server.get("/api/deployment/runLogs", runEventsHandler)
     server.get("/api/deployment/oldRunLogs", async (req, res) => {
@@ -260,6 +313,7 @@ main();
 
 
 function sendEventsToAll(text, clients) {
+  text = text.replaceAll("\n", "\\u000a")
   clients.forEach(client => client.response.write(`data: ${text}\n\n`))
 }
 function runEventsHandler(request, response, next) {
@@ -300,6 +354,7 @@ function runEventsHandler(request, response, next) {
   const data = `data: \\033[0;34m >>>>> Successfully loaded logs not from this session (Logs below are real time) <<<<<\\033[0m\n\n`;
 
   response.write(data);
+  if (!runListeners[id]) runListeners[id] = [];
 
   const clientId = Date.now();
 
@@ -307,6 +362,7 @@ function runEventsHandler(request, response, next) {
     id: clientId,
     response
   };
+  runListeners[id].push(newClient);
 
 
   var container = docker.getContainer(`nds-container-${id}`);
@@ -321,6 +377,7 @@ function runEventsHandler(request, response, next) {
 
   request.on('close', () => {
     console.log(`${clientId} Connection closed`);
+    runListeners[id] = runListeners[id].filter(client => client.id !== clientId);
   });
 }
 function buildEventsHandler(request, response, next) {

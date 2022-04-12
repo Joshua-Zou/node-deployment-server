@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Segment, Radio, Checkbox} from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment, Radio, Checkbox, Label} from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -241,7 +241,7 @@ function Deploy() {
         evtSource.current = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
         evtSource.current.onmessage = function (e) {
             console.log(e.data)
-            newLog(e.data)
+            newLog(e.data.replaceAll("\\u000a", "\n"))
         }
         let results = await fetch(`/api/deployment/deploy?auth=${getCachedAuth()}&id=${id}`, {
             method: "POST"
@@ -312,26 +312,53 @@ function Console() {
     if (dconsole[dconsole.length - 1] === "Loading...") {
         initEventStream();
     }
+    const [runCmd, setRunCmd] = useState("");
+
     return (
-        <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
+        <div>
+            <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
+            <Input style={{width: "50%"}} placeholder='ls' labelPosition='right' onChange={(e, d) => setRunCmd(d.value)}>
+                <Label>
+                    <span style={{verticalAlign: "middle"}}>Run Command</span>
+                </Label>
+                <input/>
+                <Label style={{padding: 0}}>
+                    <Button color="blue" content="Run" style={{margin: 0, height: "100%", borderTopLeftRadius: 0, borderBottomLeftRadius: 0}} onClick={() => {
+                        fetch(`/api/deployment/exec?auth=${getCachedAuth()}&id=${id}&cmd=${encodeURIComponent(runCmd)}`, {
+                            method: "POST"
+                        }).then(data => data.json()).then(data => {
+                            if (data.error) return setConsole(dconsole => [...dconsole, "\u001b[31m"+data.error]);
+                            else setConsole(dconsole => [...dconsole,data.stdout]);
+                        })
+                    }}/>
+                </Label>
+            </Input>
+        </div>
     )
+
+    
+
     async function initEventStream() {
         let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
         oldLogs = await oldLogs.json();
         if (oldLogs.data) {
+            oldLogs.data = oldLogs.data.replaceAll("\\u000a", "\n")
             let logs = oldLogs.data.split("\n")
             logs.forEach(l => newLog(l))
         }
         consoleStream.current = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
         consoleStream.current.onmessage = function (e) {
-            newLog(e.data)
+            newLog(e.data.replaceAll("\\u000a", "\n"))
         }
     }
     function newLog(log) {
-        log = unescapejs(log)
-        log = log.replace(/[\x00-\x08\x0E-\x1F\x7F-\uFFFF]/g, '')
-        log = log.replace(/\[0/g, "\u001b[0")
-        console.log(log)
+        if (!log.startsWith("\u123e")) {
+            log = unescapejs(log)
+            log = log.replace(/[\x00-\x08\x0E-\x1F\x7F-\uFFFF]/g, '')
+            log = log.replace(/\[0/g, "\u001b[0")
+        } else {
+            log = log.slice(2)
+        }
         setConsole(dconsole => [...dconsole, log]);
     }
 }
