@@ -138,6 +138,10 @@ function main() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       let restartPolicy = { false: "", true: "unless-stopped" }
+      var env = [];
+      Object.entries(deployment.environmentVariables).forEach(([key, value]) => {
+        env.push(`${key}=${value}`)
+      })
       docker.createContainer({
         Image: `nds-deployment-${id}`,
         name: `nds-container-${id}`,
@@ -149,7 +153,8 @@ function main() {
           RestartPolicy: {
             Name: restartPolicy[deployment.startContainerOnStartup],
           }
-        }
+        },
+        Env: env
       }, function (err, container) {
         if (err) {
           sendSSE("Error starting container: " + err.toString());

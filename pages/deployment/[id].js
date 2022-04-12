@@ -332,7 +332,9 @@ function Settings() {
         memory: 0,
         runCmd: "",
         nodeVersion: "",
-        loading: true
+        loading: true,
+        environmentVariables: {},
+        startContainerOnStartup: false
     });
     const [disabled, setDisabled] = useState(true);
     if (deployment.loading === true) {
@@ -350,6 +352,7 @@ function Settings() {
             <PortSettings deployment={deployment} disabled={disabled} />
             <Name deployment={deployment} disabled={disabled} />
             <Environment deployment={deployment} disabled={disabled} />
+            <EnvVariables deployment={deployment} disabled={disabled} />
             <ContainerSettings deployment={deployment} disabled={disabled} />
             <DeploymentActions deployment={deployment} disabled={disabled} />
         </div>
@@ -371,7 +374,9 @@ function Settings() {
                     if (results.error) alert(results.error);
                     else {
                         alert(results.data);
-                        window.location.reload();
+                        getDeploymentInformation(id).then(deployment => {
+                            setDeployment(deployment);
+                        })
                     }
                 }} />
             </div>
@@ -391,7 +396,7 @@ function Settings() {
                     if (results.error) alert(results.error);
                     else {
                         alert(results.data);
-                        window.location.reload();
+                        window.location.reload()
                     }
                 }} />
             </div>
@@ -419,7 +424,9 @@ function Settings() {
                     if (results.error) alert(results.error);
                     else {
                         alert(results.data);
-                        window.location.reload();
+                        getDeploymentInformation(id).then(deployment => {
+                            setDeployment(deployment);
+                        })
                     }
                 }} />
             </div>
@@ -430,7 +437,7 @@ function Settings() {
         return (
             <div className={styles.settingsSection}>
                 <h3>Container Settings</h3>
-                <span style={{verticalAlign: "top", fontWeight: "bold", marginRight: "10px"}}>Start Deployment on Computer Startup</span>
+                <span style={{ verticalAlign: "top", fontWeight: "bold", marginRight: "10px" }}>Start Deployment on Computer Startup</span>
                 <Radio toggle defaultChecked={props.deployment.startContainerOnStartup} onChange={(e, d) => startContainerOnStartup = d.checked} />
                 <br></br>
                 <br></br>
@@ -440,7 +447,9 @@ function Settings() {
                     if (results.error) alert(results.error);
                     else {
                         alert(results.data);
-                        window.location.reload();
+                        getDeploymentInformation(id).then(deployment => {
+                            setDeployment(deployment);
+                        })
                     }
                 }} />
             </div>
@@ -475,6 +484,81 @@ function Settings() {
             </div>
 
         )
+    }
+    function EnvVariables(props) {
+        var varKey = "";
+        var varValue = "";
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Environment Variables</h3>
+                <Table basic='very'>
+                    <Table.Body>
+                        {
+                            Object.entries(props.deployment.environmentVariables).map(([key, value], i) => {
+                                return (
+                                    <KeyValuePair i={i} keyx={key} value={value} key={i}/>
+                                )
+                            })
+                        }
+                        <Table.Row textAlign='right'>
+                            <Table.Cell><Input placeholder="KEY" style={{ width: "100%" }} onChange={(e, d) => varKey = d.value} /></Table.Cell>
+                            <Table.Cell><Input placeholder="VALUE" style={{ width: "100%" }} onChange={(e, d) => varValue = d.value} /></Table.Cell>
+                            <Table.Cell><Button content="Add" primary inverted onClick={() => {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&key=${varKey}&value=${varValue}&action=changeEnv`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }} /></Table.Cell>
+                        </Table.Row>
+                    </Table.Body>
+                </Table>
+            </div>
+        )
+        function KeyValuePair(props) {
+            var value = props.value;
+            var [disabled, setDisabled] = useState(true)
+            return (
+                <Table.Row>
+                    <Table.Cell><Input value={props.keyx} style={{ width: "100%" }} disabled /></Table.Cell>
+                    <Table.Cell><Input defaultValue={props.value} style={{ width: "100%" }} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e)=> {
+                        if (e.key === "Enter"){
+                            fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&key=${props.keyx}&value=${value}&action=changeEnv`).then(res => res.json()).then(json => {
+                                if (json.error) alert(json.error);
+                                else {
+                                    alert(json.data);
+                                    getDeploymentInformation(id).then(deployment => {
+                                        setDeployment(deployment);
+                                    })
+                                }
+                            })
+                        }
+                    }}/></Table.Cell>
+                    <Table.Cell textAlign='right'>
+                        <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
+                            setDisabled(false)
+                        }} />
+                        <Icon name="delete" style={{ color: "white", cursor: "pointer", fontSize: "1.0em" }} onClick={() => {
+                            if (confirm("Are you sure you want to delete this variable?")) {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&key=${props.keyx}&action=deleteEnv`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }
+                        }} />
+                    </Table.Cell>
+                </Table.Row>
+            )
+        }
     }
 }
 

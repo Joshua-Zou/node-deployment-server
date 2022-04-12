@@ -70,7 +70,8 @@ export default async function handler(req, res) {
             status: "waiting for initialization",
             runCmd: "start",
             nodeVersion: "node:17.8.0-buster",
-            startContainerOnStartup: true
+            startContainerOnStartup: true,
+            environmentVariables: {}
         })
         fs.mkdirSync("./deployments/"+id);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -245,6 +246,36 @@ export default async function handler(req, res) {
         config.deployments.splice(deploymentIndex, 1)
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Successfully deleted deployment server!" }); 
+    } else if (req.query.action === "changeEnv") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        let key = req.query.key;
+        let value = req.query.value;
+        if (!key) return res.send({ error: "No key specified!" });
+        if (!value) return res.send({ error: "No value specified!" });
+        deployment.environmentVariables[key.toUpperCase()] = value;
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "deleteEnv") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        let key = req.query.key;
+        if (!key) return res.send({ error: "No key specified!" });
+        delete deployment.environmentVariables[key.toUpperCase()];
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
     }
     } catch(err) {
         return res.send({ error: "An internal server error occured!", err: err.toString()});
