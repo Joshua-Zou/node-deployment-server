@@ -365,14 +365,13 @@ function Console() {
 function Settings() {
     const [deployment, setDeployment] = useState({
         name: "",
-        internalPort: 0,
-        externalPort: 0,
         memory: 0,
-        runCmd: "",
+        fullRunCommand: "",
         nodeVersion: "",
         loading: true,
         environmentVariables: {},
-        startContainerOnStartup: false
+        startContainerOnStartup: false,
+        portMappings: []
     });
     const [disabled, setDisabled] = useState(true);
     if (deployment.loading === true) {
@@ -396,29 +395,81 @@ function Settings() {
         </div>
     )
     function PortSettings(props) {
-        var internalPort = props.deployment.internalPort;
-        var externalPort = props.deployment.externalPort;
+        var varKey = "";
+        var varValue = "";
         return (
             <div className={styles.settingsSection}>
                 <h3>Port Mappings</h3>
-                <Input type="number" defaultValue={props.deployment.internalPort} placeholder="Internal Port" onChange={(e, d) => internalPort = d.value} />
-                <Icon name="arrow right" style={{ marginLeft: "10px" }} />
-                <Input type="number" defaultValue={props.deployment.externalPort} placeholder="External Port" onChange={(e, d) => externalPort = d.value} />
-                <br></br>
-                <br></br>
-                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
-                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&internalPort=${internalPort}&externalPort=${externalPort}&action=updatePort`);
-                    results = await results.json();
-                    if (results.error) alert(results.error);
-                    else {
-                        alert(results.data);
-                        getDeploymentInformation(id).then(deployment => {
-                            setDeployment(deployment);
-                        })
-                    }
-                }} />
+                <Table basic='very' collapsing>
+                    <Table.Body>
+                        {
+                            props.deployment.portMappings.map((ports, i) => {
+                                return (
+                                    <KeyValuePair i={i} keyx={ports.split(":")[0]} value={ports.split(":")[1]} key={i} index={i}/>
+                                )
+                            })
+                        }
+                        <Table.Row>
+                            <Table.Cell><Input placeholder="Internal Port" onChange={(e, d) => varKey = d.value} />
+                                <Icon name="arrow right" style={{color: "white", fontSize: "1.1em", position: "relative", left: "12px"}}/>
+                            </Table.Cell>
+                            <Table.Cell><Input placeholder="External Port" onChange={(e, d) => varValue = d.value} /></Table.Cell>
+                            <Table.Cell><Button content="Add" primary inverted onClick={() => {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&internal=${varKey}&external=${varValue}&action=changePort&index=new`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }} /></Table.Cell>
+                        </Table.Row>
+                    </Table.Body>
+                </Table>
             </div>
         )
+        function KeyValuePair(props) {
+            var value = props.value;
+            var [disabled, setDisabled] = useState(true)
+            return (
+                <Table.Row>
+                    <Table.Cell><Input value={props.keyx} disabled /><Icon name="arrow right" style={{color: "white", fontSize: "1.1em", position: "relative", left: "12px"}}/></Table.Cell>
+                    <Table.Cell><Input defaultValue={props.value} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e)=> {
+                        if (e.key === "Enter"){
+                            fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&internal=${props.keyx}&external=${value}&action=changePort&index=${props.index}`).then(res => res.json()).then(json => {
+                                if (json.error) alert(json.error);
+                                else {
+                                    alert(json.data);
+                                    getDeploymentInformation(id).then(deployment => {
+                                        setDeployment(deployment);
+                                    })
+                                }
+                            })
+                        }
+                    }}/></Table.Cell>
+                    <Table.Cell textAlign='right'>
+                        <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
+                            setDisabled(false)
+                        }} />
+                        <Icon name="delete" style={{ color: "white", cursor: "pointer", fontSize: "1.0em" }} onClick={() => {
+                            if (confirm("Are you sure you want to delete this port mapping?")) {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&index=${props.index}&action=deletePortmap`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }
+                        }} />
+                    </Table.Cell>
+                </Table.Row>
+            )
+        }
     }
     function Name(props) {
         var name = props.deployment.name;
@@ -443,7 +494,8 @@ function Settings() {
     function Environment(props) {
         var memory = props.deployment.memory;
         var nodeVersion = props.deployment.nodeVersion;
-        var runCmd = props.deployment.runCmd;
+        var runCmd = props.deployment.fullRunCommand;
+        var installCommand = props.deployment.installCommand;
         return (
             <div className={styles.settingsSection}>
                 <h3>Deployment Environment</h3>
@@ -453,11 +505,14 @@ function Settings() {
                 <Input defaultValue={props.deployment.nodeVersion} placeholder="Node Image" onChange={(e, d) => nodeVersion = d.value} label="NodeJS Image" />
                 <br></br>
                 <br></br>
-                <Input defaultValue={props.deployment.runCmd} placeholder="Run Command" onChange={(e, d) => runCmd = d.value} label="npm run " />
+                <Input defaultValue={props.deployment.fullRunCommand} placeholder="Run Command" onChange={(e, d) => runCmd = d.value} label="Run command" />
+                <br></br>
+                <br></br>
+                <Input defaultValue={props.deployment.installCommand} placeholder="npm install" onChange={(e, d) => installCommand = d.value} label="Package installation command" />
                 <br></br>
                 <br></br>
                 <Button content="Save" primary disabled={props.disabled} onClick={async () => {
-                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&memory=${memory}&nodeVersion=${nodeVersion}&runCmd=${runCmd}&action=updateEnvironment`);
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&memory=${memory}&nodeVersion=${nodeVersion}&runCmd=${runCmd}&installCommand=${installCommand}&action=updateEnvironment`);
                     results = await results.json();
                     if (results.error) alert(results.error);
                     else {

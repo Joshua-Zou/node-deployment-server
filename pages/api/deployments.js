@@ -58,20 +58,19 @@ export default async function handler(req, res) {
         if (!name) return res.send({ error: "No deployment name specified" });
         if (internalPort < 10 || internalPort > 65535) return res.send({ error: "No internal port specified or port outside of range!" });
         if (externalPort < 10 || externalPort > 65535) return res.send({ error: "No external port specified or port outside of range!" });
-        if (config.deployments && config.deployments.find(d => d.externalPort === externalPort)) return res.send({ error: "External port already taken!" });
         if (memory < 512 || memory > osu.mem.totalMem()-10) return res.send({ error: "Memory must be greater than 512 MB and less than host system's memory!" });
         if (!config.deployments) config.deployments = [];
         config.deployments.push({
             name: name,
-            internalPort: internalPort,
-            externalPort: externalPort,
+            portMappings: [`${internalPort}:${externalPort}`],
             memory: memory,
             id: id,
             status: "waiting for initialization",
-            runCmd: "start",
+            fullRunCommand: "npm run start",
             nodeVersion: "node:17.8.0-buster",
             startContainerOnStartup: true,
-            environmentVariables: {}
+            environmentVariables: {},
+            installCommand: "npm install"
         })
         fs.mkdirSync("./deployments/"+id);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -147,25 +146,43 @@ export default async function handler(req, res) {
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
-    } else if (req.query.action === "updatePort") {
+    } else if (req.query.action === "changePort") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
         }
         let id = req.query.id;
         let deployment = config.deployments.find(d => d.id === id);
         if (!deployment) return res.send({ error: "Deployment not found!" });
-        let internalPort = req.query.internalPort;
-        let externalPort = req.query.externalPort;
-        if (internalPort < 10 || internalPort > 65535) return res.send({ error: "No internal port specified or port outside of range!" });
-        if (externalPort < 10 || externalPort > 65535) return res.send({ error: "No external port specified or port outside of range!" });
-        if (config.deployments.find(d => d.externalPort === externalPort && d.id !== id)) return res.send({ error: "External port already taken!" });
+        let internalPort = req.query.internal;
+        let externalPort = req.query.external;
+
+        if (req.query.index === "new") {
+            deployment.portMappings.push(`${internalPort}:${externalPort}`);
+        } else {
+            let index = Number(req.query.index);
+            deployment.portMappings[index] = `${internalPort}:${externalPort}`;
+        }
+
 
         let deploymentIndex = config.deployments.findIndex(d => d.id === id);
-        deployment.internalPort = internalPort;
-        deployment.externalPort = externalPort;
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "deletePortmap") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+       
+        deployment.portMappings.splice(Number(req.query.index), 1);
+
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+
     } else if (req.query.action === "updateName") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
@@ -193,9 +210,10 @@ export default async function handler(req, res) {
         let memory = req.query.memory;
         let nodeVersion = req.query.nodeVersion;
         let runCmd = req.query.runCmd;
-        if (!(Number(memory) > 511)) return res.send({ error: "Memory must be at least 512MB!" });
-        if (!runCmd) return res.send({ error: "No run command specified!" });
+        let installCommand = req.query.installCommand;
 
+        if (!(Number(memory) > 511)) return res.send({ error: "Memory must be at least 512MB!" });
+        if (!installCommand) return res.send({ error: "No install command specified!" });
 
         let imageTag = nodeVersion.slice(nodeVersion.indexOf(":")+1);
         let imageName = nodeVersion.slice(0, nodeVersion.indexOf(":"));
@@ -208,7 +226,8 @@ export default async function handler(req, res) {
 
         deployment.memory = memory;
         deployment.nodeVersion = nodeVersion;
-        deployment.runCmd = runCmd;
+        deployment.fullRunCommand = runCmd;
+        deployment.installCommand = installCommand;
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
@@ -243,8 +262,10 @@ export default async function handler(req, res) {
         let deployment = config.deployments.find(d => d.id === id);
         if (!deployment) return res.send({ error: "Deployment not found!" });
         let container = docker.getContainer(`nds-container-${id}`);       
-        await container.stop();
-        await container.remove();
+        try {
+            await container.stop();
+            await container.remove();
+        }catch(err){}
         let deploymentIndex = config.deployments.findIndex(d => d.id === id);
         config.deployments.splice(deploymentIndex, 1)
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -261,7 +282,7 @@ export default async function handler(req, res) {
         let value = req.query.value;
         if (!key) return res.send({ error: "No key specified!" });
         if (!value) return res.send({ error: "No value specified!" });
-        deployment.environmentVariables[key.toUpperCase()] = value;
+        deployment.environmentVariables[key] = value;
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
@@ -275,7 +296,7 @@ export default async function handler(req, res) {
         let deploymentIndex = config.deployments.findIndex(d => d.id === id);
         let key = req.query.key;
         if (!key) return res.send({ error: "No key specified!" });
-        delete deployment.environmentVariables[key.toUpperCase()];
+        delete deployment.environmentVariables[key];
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });

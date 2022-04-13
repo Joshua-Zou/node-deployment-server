@@ -1,6 +1,6 @@
 const fs = require("fs");
 var Docker = require("dockerode");
-const currentConfigFileVersion = 3;
+const currentConfigFileVersion = 4;
 
 
 

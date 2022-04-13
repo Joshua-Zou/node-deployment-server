@@ -90,12 +90,17 @@ function main() {
       try { fs.unlinkSync("./deployments/" + id + "/build.zip") } catch (e) { }
       try { fs.unlinkSync("./deployments/" + id + "/build.tar") } catch (e) { }
       sendSSE("Updating Dockerfile...");
+
+      let runCommand = JSON.stringify(deployment.fullRunCommand.split(" "))
+      if (deployment.fullRunCommand.split(" ")[0] !== "") runCommand = "CMD "+runCommand
+      else runCommand = ""
+
       let dockerFile = fs.readFileSync("./deployments/Dockerfile", "utf8");
       dockerFile = dockerFile.replaceAll("{{NODEVERSIONTEMPLATE}}", deployment.nodeVersion);
-      dockerFile = dockerFile.replaceAll("{{INTERNALPORTTEMPLATE}}", deployment.internalPort);
       dockerFile = dockerFile.replaceAll("{{DEPLOYMENTIDTEMPLATE}}", id);
-      dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", deployment.runCmd);
+      dockerFile = dockerFile.replaceAll("{{RUNCMDTEMPLATE}}", runCommand);
       dockerFile = dockerFile.replaceAll("{{FOLDERNAME}}", deployment.internalFolderName);
+      dockerFile = dockerFile.replaceAll("{{PACKAGEINSTALLATIONCOMMAND}}", deployment.installCommand);
       fs.writeFileSync(`./deployments/${id}/Dockerfile`, dockerFile);
 
       sendSSE("Creating tarball...")
@@ -140,20 +145,34 @@ function main() {
 
       let restartPolicy = { false: "", true: "unless-stopped" }
       var env = [];
+      var ports = {};
+      var hostConfigPorts = {};
+
+      for (let i in deployment.portMappings) {
+        let port = deployment.portMappings[i];
+        let internalPort = port.split(":")[0];
+        let externalPort = port.split(":")[1];
+        if (!internalPort.endsWith("/tcp") && !internalPort.endsWith("/udp")) internalPort += "/tcp";
+        ports[internalPort] = {}
+
+        hostConfigPorts[internalPort] = [
+          {HostPort: externalPort}
+        ]
+
+      }
       Object.entries(deployment.environmentVariables).forEach(([key, value]) => {
         env.push(`${key}=${value}`)
       })
       docker.createContainer({
         Image: `nds-deployment-${id}`,
         name: `nds-container-${id}`,
-        ExposedPorts: {
-          [`${deployment.internalPort}/${deployment.externalPort}`]: {}
-        },
+        ExposedPorts: ports,
         HostConfig: {
           Memory: deployment.memory * 1024 * 1024,
           RestartPolicy: {
             Name: restartPolicy[deployment.startContainerOnStartup],
-          }
+          },
+          PortBindings: hostConfigPorts
         },
         Env: env
       }, function (err, container) {

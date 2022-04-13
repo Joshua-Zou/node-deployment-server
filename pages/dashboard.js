@@ -69,7 +69,7 @@ function DeploymentList() {
                 <Table.Cell>{deployment.status}</Table.Cell>
                 <Table.Cell>Internal: {deployment.internalPort} | External: {deployment.externalPort}</Table.Cell>
                 <Table.Cell>{deployment.memory} MB</Table.Cell>
-                <Table.Cell>npm run {deployment.runCmd}</Table.Cell>
+                <Table.Cell>{deployment.fullRunCommand}</Table.Cell>
                 <Table.Cell>{deployment.nodeVersion}</Table.Cell>
               </Table.Row>
             )

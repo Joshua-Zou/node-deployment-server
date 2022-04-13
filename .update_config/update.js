@@ -1,4 +1,4 @@
-const target = 3;
+const target = 4;
 
 const fs = require("fs")
 console.log("Starting config file update...");
