@@ -73,7 +73,7 @@ Updating to a newer version of NDS is simple! Simply follow the below steps:
  1. Download the latest version of NDS [here](https://github.com/Joshua-Zou/node-deployment-server/releases)
  2. Extract the folder. **Important**: If you are extracting to the same parent directory as your current installation, make sure that the new folder is a different name, otherwise you will overwrite your deployments.
  3. Copy your `nds_config.json` file from your old version and replace the `nds_config.json` in the new version 
- 4. Copy the entire `deployments` folder from your old version and replace the `deployments` folder in the new version
+ 4. Copy the entire `deployments` folder from your old version and replace the `deployments` folder in the new version. - **IMPORTANT:** If you are upgrading from a version less than v1.2.0 to a version higher, the dockerfile template changed in. So, you must copy all of your deployment folders *inside* of the `deployment` folder, and NOT the entire `deployment` folder.
  5. Navigate to the new server in your terminal and run `npm install`
  6. Then, run `npm start` to start the server. If it runs fine, congrats! You successfully updated your server. However, if it throws and error saying that `nds_config` is outdated, continue to step 7
  7. To update `nds_config.json` to the latest config version, simply run `npm run update-config`. Once this finishes running, start the server again and everything should work!
