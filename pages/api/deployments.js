@@ -199,7 +199,10 @@ export default async function handler(req, res) {
 
         let imageTag = nodeVersion.slice(nodeVersion.indexOf(":")+1);
         let imageName = nodeVersion.slice(0, nodeVersion.indexOf(":"));
-        let image = await fetch(`https://hub.docker.com/v2/repositories/library/${imageName}/tags/${imageTag}`);
+        if (!imageName.includes("/")) {
+            imageName = "library/"+imageName;
+        }
+        let image = await fetch(`https://hub.docker.com/v2/repositories/${imageName}/tags/${imageTag}`);
         image = await image.json();
         if (image.errinfo) return res.send({ error: "Docker image not found on the docker registry!" });
 
