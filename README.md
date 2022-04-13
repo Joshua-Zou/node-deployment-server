@@ -8,6 +8,7 @@
  - [Deployment](#deployment)
  - [Deployment Settings](#deployment-settings)
  - [Update Guide](#update-guide)
+ - [Using non-nodejs images](#using-non-nodejs-images)
 
 ## Description
 As the name suggests, NDS is a quick and easy platform where users can create their own "cloud" and easily deploy, manage, and update their Node.JS webapps. NDS is powered by Docker.
@@ -77,3 +78,9 @@ Updating to a newer version of NDS is simple! Simply follow the below steps:
  5. Navigate to the new server in your terminal and run `npm install`
  6. Then, run `npm start` to start the server. If it runs fine, congrats! You successfully updated your server. However, if it throws and error saying that `nds_config` is outdated, continue to step 7
  7. To update `nds_config.json` to the latest config version, simply run `npm run update-config`. Once this finishes running, start the server again and everything should work!
+
+## Using non-nodejs images
+If you would like to deploy a custom image, whether it be a python deployment or a pi-hole server, we've got you covered! \
+Simply change the NodeJS image field to your image of choice (doesn't need to be nodejs)\
+Then, change the Run command to your custom run command (cannot be NPM since NPM is only included in the nodejs base image). You **can** leave this run command blank.\
+If you would like to change the install command, change that field to your custom installation script (ex. `pip install -r requirements.txt`) . **This field MUST be filled out with a valid command** If you wish to not do anything, simply type in `ls`, the command to list files and directories.
