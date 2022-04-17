@@ -81,6 +81,15 @@ function DeploymentList() {
   async function getDeployments(){
     const response = await fetch(`/api/deployments?auth=${getCachedAuth()}&action=getDeployments`);
     const data = await response.json();
+    for (let i in data.data) {
+      if (data.data[i].portMappings[0]) {
+        data.data[i].internalPort = data.data[i].portMappings[0].split(":")[1]
+        data.data[i].externalPort = data.data[i].portMappings[0].split(":")[0]
+      } else {
+        data.data[i].internalPort = "N/A"
+        data.data[i].externalPort = "N/A"
+      }
+    }
     setDeployments(data.data);
   }
 }
