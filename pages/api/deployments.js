@@ -334,6 +334,7 @@ export default async function handler(req, res) {
             deployment.volumes.push({})
         }
 
+        if (!config.volumes.find(v => v.id === volumeId)) return res.send({ error: "Volume not found!" });
         if (deployment.volumes.find(v => v.mountpoint === mountpoint)) return res.send({ error: "Mountpoint already in use!" });
 
 
@@ -342,7 +343,7 @@ export default async function handler(req, res) {
 
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
+        return res.send({ data: "Volume configuration updated successfully! Deploy again to apply changes" });
     }
 
     } catch(err) {
