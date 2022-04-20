@@ -68,6 +68,19 @@ Deploying is easy!
 `Start Command`: String - the NPM command that gets run when deployment boots.   \
 *Requires re-deploy to apply changes*  
 
+**Environment Variables**\
+Allows you to set environment variables in the standard KEY-VALUE pair\
+*Requires re-deploy to apply changes*  
+
+**Container Settings**
+ - Start deployment on computer startup
+ 
+*Requires re-deploy to apply changes*  
+
+**Attached Storage Spaces**\
+Attach storage spaces (docker volumes) into your deployment, and mount them as folders inside of the specified mountpath.\
+*Requires re-deploy to apply changes*  
+
 ## Update Guide
 Updating to a newer version of NDS is simple! Simply follow the below steps:
 
