@@ -1,13 +1,11 @@
 const fs = require("fs");
-var Docker = require("dockerode");
-const currentConfigFileVersion = 4;
+const currentConfigFileVersion = 5;
 
+var run = true;
 
-
-var docker = new Docker();
-
-async function main() {
+async function main(docker) {
     while (true) {
+        if (!run) break;
         let config = JSON.parse(fs.readFileSync("./nds_config.json"));
         // garbage manager
         let deploymentFolders = getDirectories("./deployments");
@@ -38,7 +36,7 @@ async function main() {
             })
         })
 
-        // docker image cleanup
+        // docker image cleanup (this causes io timeout)
         let images = await docker.listImages();
         images.forEach(image => {
             if (image.RepoTags[0].startsWith("nds-deployment")) {
@@ -51,18 +49,33 @@ async function main() {
                     })
             }
         })
+
+        //docker volume cleanup (this also causes io timeout)
+        let volumes = await docker.listVolumes();
+        volumes = volumes.Volumes;
+        volumes.forEach(volume => {
+            if (volume.Name.startsWith("nds-volume")) {
+                if (!config.volumes || !config.volumes.find(v => v.id === volume.Name.split("-")[2]))
+                    docker.getVolume(volume.Name).remove({ force: true }, (err, data) => {
+                        if (err) console.log(err);
+                        else {
+                            console.log("Found unused volume and removed it")
+                        }
+                    })
+            }
+        })
+
         await sleep(60000);
     }
 }
-
-main();
-checkConfigFile();
 
 function checkConfigFile() {
     let config = JSON.parse(fs.readFileSync("./nds_config.json"));
     let configFileVersion = config.configFileVersion;
     if (configFileVersion !== currentConfigFileVersion) {
-        throw "The config file's version is not up to date. Please update the config file by running the command: npm run update-config"
+        return "The config file's version is not up to date. Please update the config file by running the command: npm run update-config"
+    } else {
+        return true;
     }
 }
 
@@ -73,4 +86,21 @@ function getDirectories(path) {
     return fs.readdirSync(path).filter(function (file) {
         return fs.statSync(path + '/' + file).isDirectory();
     });
+}
+
+module.exports.start = function(docker, errFunction){
+    console.log("Starting NDS service...")
+    async function watchMain() {
+        try {
+            await main(docker);
+        } catch(err) {
+            errFunction(err.toString());
+        }
+    }
+    watchMain()
+    let configGood = checkConfigFile();
+    if (configGood !== true) errFunction(configGood, false);
+}
+module.exports.stop = function(){
+    run = false;
 }

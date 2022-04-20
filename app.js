@@ -10,6 +10,7 @@ var Docker = require('dockerode');
 const archiver = require('archiver');
 const zipToTar = require('zip-to-tar');
 const crypto = require("crypto")
+const serviceWorker = require('./service');
 
 var childProcess = require('child_process');
 var docker = new Docker();
@@ -21,22 +22,6 @@ var httpServer = null;
 var buildListeners = {};
 var runListeners = {};
 
-function runScript(scriptPath, callback) {
-  var invoked = false;
-  var process = childProcess.fork(scriptPath);
-  process.on('error', function (err) {
-    if (invoked) return;
-    invoked = true;
-    callback(err);
-  });
-  process.on('exit', function (code) {
-    if (invoked) return;
-    invoked = true;
-    var err = code === 0 ? null : new Error('exit code ' + code);
-    callback(err);
-  });
-
-}
 
 
 
@@ -147,6 +132,7 @@ function main() {
       var env = [];
       var ports = {};
       var hostConfigPorts = {};
+      var mounts = [];
 
       for (let i in deployment.portMappings) {
         let port = deployment.portMappings[i];
@@ -163,6 +149,14 @@ function main() {
       Object.entries(deployment.environmentVariables).forEach(([key, value]) => {
         env.push(`${key}=${value}`)
       })
+      deployment.volumes.forEach(volume => {
+        mounts.push({
+          Type: "volume",
+          ReadOnly: false,
+          Source: "nds-volume-"+volume.id,
+          Target: volume.mountpoint
+        })
+      })
       docker.createContainer({
         Image: `nds-deployment-${id}`,
         name: `nds-container-${id}`,
@@ -172,7 +166,8 @@ function main() {
           RestartPolicy: {
             Name: restartPolicy[deployment.startContainerOnStartup],
           },
-          PortBindings: hostConfigPorts
+          PortBindings: hostConfigPorts,
+          Mounts: mounts
         },
         Env: env
       }, function (err, container) {
@@ -306,15 +301,18 @@ function main() {
     })
   })
 
-  runScript('./service.js', function (err) {
+
+  serviceWorker.start(docker, function(err, restart=true) {
     console.log('Service Worker process ended unexpectedly!');
-    if (err) {
-      throw err
-    } else {
-      console.log("Restarting server in 10 seconds...")
-      restartServer();
+    console.error(err)
+    serviceWorker.stop();
+    if (!restart) {
+      process.exit(1);
     }
+    console.log("Restarting server in 10 seconds!")
+    restartServer();
   });
+
   function restartServer() {
     setTimeout(function () {
       process.on("exit", function () {

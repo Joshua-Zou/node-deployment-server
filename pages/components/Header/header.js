@@ -18,7 +18,8 @@ export default function Header() {
             if (props.data.permission === "admin") {
                 return (
                     <div className={styles.signedIn}>
-                        <ActiveLink className={styles.username} href="/dashboard">Dashboard</ActiveLink>
+                        <ActiveLink className={styles.username} href="/volumes">Storage Spaces</ActiveLink>
+                        <ActiveLink className={styles.username} href="/dashboard">Deployments</ActiveLink>
                         <ActiveLink className={styles.username} href="/admin"><Icon name="user"/>{props.data.user}</ActiveLink>
                         <a className={styles.logout} onClick={() => {sessionStorage.removeItem("auth"); localStorage.removeItem("auth"); window.location.href="/"}}>Logout</a>
                     </div>
@@ -26,7 +27,8 @@ export default function Header() {
             } else {
                 return (
                     <div className={styles.signedIn}>
-                        <ActiveLink className={styles.username} href="/dashboard">Dashboard</ActiveLink>
+                        <ActiveLink className={styles.username} href="/volumes">Storage Spaces</ActiveLink>
+                        <ActiveLink className={styles.username} href="/dashboard">Deployments</ActiveLink>
                         <ActiveLink className={styles.username} href="/dashboard"><Icon name="user"/>{props.data.user}</ActiveLink>
                         <a className={styles.logout} onClick={() => {sessionStorage.removeItem("auth"); localStorage.removeItem("auth"); window.location.href="/"}}>Logout</a>
                     </div>

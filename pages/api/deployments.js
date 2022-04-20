@@ -70,7 +70,8 @@ export default async function handler(req, res) {
             nodeVersion: "node:17.8.0-buster",
             startContainerOnStartup: true,
             environmentVariables: {},
-            installCommand: "npm install"
+            installCommand: "npm install",
+            volumes: []
         })
         fs.mkdirSync("./deployments/"+id);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
@@ -300,9 +301,52 @@ export default async function handler(req, res) {
         config.deployments[deploymentIndex] = deployment;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "deleteAttachedVolume") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        let index = req.query.index;
+        if (!index) return res.send({ error: "No index specified!" });
+        deployment.volumes.splice(index, 1)
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Detached volume successfully! Deploy again to apply changes" });
+    } else if (req.query.action === "updateAttachedVolume") {
+        if (user.permission !== "admin" && user.permission !== "readwrite") {
+            return res.send({ error: "User does not have adequate permissions to complete this action!" });
+        }
+        let id = req.query.id;
+        let deployment = config.deployments.find(d => d.id === id);
+        if (!deployment) return res.send({ error: "Deployment not found!" });
+        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+        let volumeId = req.query.volumeId;
+        let index = req.query.index;
+        let mountpoint = req.query.mountpoint;
+        
+        if (!volumeId) return res.send({ error: "No volumeId specified!" });
+        if (!mountpoint) return res.send({ error: "No mountpoint specified!" });
+        if (!index) return res.send({ error: "No index specified!" });
+        if (index === "new") {
+            index = deployment.volumes.length;
+            deployment.volumes.push({})
+        }
+
+        if (deployment.volumes.find(v => v.mountpoint === mountpoint)) return res.send({ error: "Mountpoint already in use!" });
+
+
+        deployment.volumes[index].id = volumeId;
+        deployment.volumes[index].mountpoint = mountpoint;
+
+        config.deployments[deploymentIndex] = deployment;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        return res.send({ data: "Environment variables updated successfully! Deploy again to apply changes" });
     }
+
     } catch(err) {
-        return res.send({ error: "An internal server error occured!", err: err.toString()});
+        return res.send({ error: "An internal server error occured!"+ err.toString()});
     }
 }
 String.prototype.replaceAll = function (find, replace){

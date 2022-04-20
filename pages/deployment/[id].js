@@ -2,7 +2,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Segment, Radio, Checkbox, Label} from 'semantic-ui-react'
+import { Icon, Table, Button, Input, Dropdown, Segment, Radio, Checkbox, Label } from 'semantic-ui-react'
 import { useState, useEffect, useRef } from 'react';
 import SignInModal from "../components/SignInModal/signInModal.js";
 import React from "react"
@@ -10,6 +10,7 @@ import { useRouter } from "next/router"
 import styles from "../../styles/deployment.module.css"
 import Ansi from "ansi-to-react";
 import unescapejs from "unescape-js"
+import ActiveLink from '../components/ActiveLink.js';
 
 var id = ""
 
@@ -292,8 +293,8 @@ class DeployConsole extends React.Component {
                         )
                     })}
                 </div>
-                <div style={{marginTop: "10px",textAlign: "right"}}>
-                    <Checkbox defaultChecked onChange={(e, d) => self.stickToBottom = d.checked}/> <span style={{verticalAlign: "top"}}>Stick to bottom</span>
+                <div style={{ marginTop: "10px", textAlign: "right" }}>
+                    <Checkbox defaultChecked onChange={(e, d) => self.stickToBottom = d.checked} /> <span style={{ verticalAlign: "top" }}>Stick to bottom</span>
                 </div>
             </div>
         )
@@ -316,27 +317,27 @@ function Console() {
 
     return (
         <div>
-            <DeployConsole visible={true} logs={dconsole} text="Application Logs"/>
-            <Input style={{width: "50%"}} placeholder='ls' labelPosition='right' onChange={(e, d) => setRunCmd(d.value)}>
+            <DeployConsole visible={true} logs={dconsole} text="Application Logs" />
+            <Input style={{ width: "50%" }} placeholder='ls' labelPosition='right' onChange={(e, d) => setRunCmd(d.value)}>
                 <Label>
-                    <span style={{verticalAlign: "middle"}}>Run Command</span>
+                    <span style={{ verticalAlign: "middle" }}>Run Command</span>
                 </Label>
-                <input/>
-                <Label style={{padding: 0}}>
-                    <Button color="blue" content="Run" style={{margin: 0, height: "100%", borderTopLeftRadius: 0, borderBottomLeftRadius: 0}} onClick={() => {
+                <input />
+                <Label style={{ padding: 0 }}>
+                    <Button color="blue" content="Run" style={{ margin: 0, height: "100%", borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }} onClick={() => {
                         fetch(`/api/deployment/exec?auth=${getCachedAuth()}&id=${id}&cmd=${encodeURIComponent(runCmd)}`, {
                             method: "POST"
                         }).then(data => data.json()).then(data => {
-                            if (data.error) return setConsole(dconsole => [...dconsole, "\u001b[31m"+data.error]);
-                            else setConsole(dconsole => [...dconsole,data.stdout]);
+                            if (data.error) return setConsole(dconsole => [...dconsole, "\u001b[31m" + data.error]);
+                            else setConsole(dconsole => [...dconsole, data.stdout]);
                         })
-                    }}/>
+                    }} />
                 </Label>
             </Input>
         </div>
     )
 
-    
+
 
     async function initEventStream() {
         let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
@@ -371,7 +372,8 @@ function Settings() {
         loading: true,
         environmentVariables: {},
         startContainerOnStartup: false,
-        portMappings: []
+        portMappings: [],
+        volumes: []
     });
     const [disabled, setDisabled] = useState(true);
     if (deployment.loading === true) {
@@ -391,6 +393,7 @@ function Settings() {
             <Environment deployment={deployment} disabled={disabled} />
             <EnvVariables deployment={deployment} disabled={disabled} />
             <ContainerSettings deployment={deployment} disabled={disabled} />
+            <Volumes deployment={deployment} disabled={disabled} />
             <DeploymentActions deployment={deployment} disabled={disabled} />
         </div>
     )
@@ -405,13 +408,13 @@ function Settings() {
                         {
                             props.deployment.portMappings.map((ports, i) => {
                                 return (
-                                    <KeyValuePair i={i} keyx={ports.split(":")[0]} value={ports.split(":")[1]} key={i} index={i}/>
+                                    <KeyValuePair i={i} keyx={ports.split(":")[0]} value={ports.split(":")[1]} key={i} index={i} />
                                 )
                             })
                         }
                         <Table.Row>
                             <Table.Cell><Input placeholder="Internal Port" onChange={(e, d) => varKey = d.value} />
-                                <Icon name="arrow right" style={{color: "white", fontSize: "1.1em", position: "relative", left: "12px"}}/>
+                                <Icon name="arrow right" style={{ color: "white", fontSize: "1.1em", position: "relative", left: "12px" }} />
                             </Table.Cell>
                             <Table.Cell><Input placeholder="External Port" onChange={(e, d) => varValue = d.value} /></Table.Cell>
                             <Table.Cell><Button content="Add" primary inverted onClick={() => {
@@ -435,9 +438,9 @@ function Settings() {
             var [disabled, setDisabled] = useState(true)
             return (
                 <Table.Row>
-                    <Table.Cell><Input value={props.keyx} disabled /><Icon name="arrow right" style={{color: "white", fontSize: "1.1em", position: "relative", left: "12px"}}/></Table.Cell>
-                    <Table.Cell><Input defaultValue={props.value} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e)=> {
-                        if (e.key === "Enter"){
+                    <Table.Cell><Input value={props.keyx} disabled /><Icon name="arrow right" style={{ color: "white", fontSize: "1.1em", position: "relative", left: "12px" }} /></Table.Cell>
+                    <Table.Cell><Input defaultValue={props.value} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e) => {
+                        if (e.key === "Enter") {
                             fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&internal=${props.keyx}&external=${value}&action=changePort&index=${props.index}`).then(res => res.json()).then(json => {
                                 if (json.error) alert(json.error);
                                 else {
@@ -448,7 +451,7 @@ function Settings() {
                                 }
                             })
                         }
-                    }}/></Table.Cell>
+                    }} /></Table.Cell>
                     <Table.Cell textAlign='right'>
                         <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
                             setDisabled(false)
@@ -589,7 +592,7 @@ function Settings() {
                         {
                             Object.entries(props.deployment.environmentVariables).map(([key, value], i) => {
                                 return (
-                                    <KeyValuePair i={i} keyx={key} value={value} key={i}/>
+                                    <KeyValuePair i={i} keyx={key} value={value} key={i} />
                                 )
                             })
                         }
@@ -618,8 +621,8 @@ function Settings() {
             return (
                 <Table.Row>
                     <Table.Cell><Input value={props.keyx} style={{ width: "100%" }} disabled /></Table.Cell>
-                    <Table.Cell><Input defaultValue={props.value} style={{ width: "100%" }} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e)=> {
-                        if (e.key === "Enter"){
+                    <Table.Cell><Input defaultValue={props.value} style={{ width: "100%" }} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e) => {
+                        if (e.key === "Enter") {
                             fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&key=${props.keyx}&value=${value}&action=changeEnv`).then(res => res.json()).then(json => {
                                 if (json.error) alert(json.error);
                                 else {
@@ -630,7 +633,7 @@ function Settings() {
                                 }
                             })
                         }
-                    }}/></Table.Cell>
+                    }} /></Table.Cell>
                     <Table.Cell textAlign='right'>
                         <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
                             setDisabled(false)
@@ -648,6 +651,105 @@ function Settings() {
                                 })
                             }
                         }} />
+                    </Table.Cell>
+                </Table.Row>
+            )
+        }
+    }
+    function Volumes(props) {
+        const [selectableVolumes, setSelectableVolumes] = useState([
+            { loading: "true", key: "."}
+        ]);
+        const [allVolumes, setAllVolumes] = useState([]);
+        const [selectedVolume, setSelectedVolume] = useState("");
+        var varValue = "/var/volumes/"+selectedVolume.text
+
+        if (selectableVolumes[0] && selectableVolumes[0].loading) {
+            fetch(`/api/volumes?auth=${getCachedAuth()}&action=listVolumes`).then(res => res.json()).then(json => {
+                setAllVolumes(json.data)
+                let volumes = [];
+                json.data.forEach(v => {
+                    if (!props.deployment.volumes.find(d => d.id === v.id)) volumes.push({key: v.id, text: v.name, value: v.id})
+                })
+                setSelectableVolumes(volumes);
+            })
+        }
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Attached Storage Spaces</h3>
+                <Table basic='very' collapsing>
+                    <Table.Body>
+                        {
+                            props.deployment.volumes.map((volume, i) => {
+                                let name = allVolumes.find(v => v.id === volume.id);
+                                return (
+                                    <KeyValuePair i={i} keyx={name || {}} value={volume.mountpoint} key={i} index={i} />
+                                )
+                            })
+                        }
+                        <Table.Row>
+                            <Table.Cell>
+                                <Dropdown placeholder='Storage Space Name' search selection options={selectableVolumes} onChange={(e, d) => {
+                                    setSelectedVolume(selectableVolumes.find(v => v.value === d.value))
+                                }}/>
+                                <Icon name="arrow right" style={{ color: "white", fontSize: "1.1em", position: "relative", left: "12px" }} />
+                            </Table.Cell>
+                            <Table.Cell><Input placeholder="Mount Location" defaultValue={"/var/volumes/"+selectedVolume.text} key={selectedVolume.text} onChange={(e, d) => varValue = d.value} /></Table.Cell>
+                            <Table.Cell><Button content="Add" primary inverted onClick={() => {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&volumeId=${selectedVolume.value}&mountpoint=${varValue}&action=updateAttachedVolume&index=${"new"}`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }} /></Table.Cell>
+                        </Table.Row>
+                    </Table.Body>
+                </Table>
+            </div>
+        )
+        function KeyValuePair(props) {
+            var value = props.value;
+            var [disabled, setDisabled] = useState(true)
+            return (
+                <Table.Row>
+                    <Table.Cell><Input value={props.keyx.name} disabled /><Icon name="arrow right" style={{ color: "white", fontSize: "1.1em", position: "relative", left: "12px" }} /></Table.Cell>
+                    <Table.Cell><Input defaultValue={props.value} disabled={disabled} label="↵" labelPosition='right' onChange={(e, d) => value = d.value} onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&volumeId=${props.keyx.id}&mountpoint=${value}&action=updateAttachedVolume&index=${props.index}`).then(res => res.json()).then(json => {
+                                if (json.error) alert(json.error);
+                                else {
+                                    alert(json.data);
+                                    getDeploymentInformation(id).then(deployment => {
+                                        setDeployment(deployment);
+                                    })
+                                }
+                            })
+                        }
+                    }} /></Table.Cell>
+                    <Table.Cell textAlign='right'>
+                        <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
+                            setDisabled(false)
+                        }} />
+                        <Icon name="delete" style={{ color: "white", cursor: "pointer", fontSize: "1.2em", position: "relative", top: "2px"}} onClick={() => {
+                            if (confirm("Are you sure you want to detach this storage space?")) {
+                                fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&index=${props.index}&action=deleteAttachedVolume`).then(res => res.json()).then(json => {
+                                    if (json.error) alert(json.error);
+                                    else {
+                                        alert(json.data);
+                                        getDeploymentInformation(id).then(deployment => {
+                                            setDeployment(deployment);
+                                        })
+                                    }
+                                })
+                            }
+                        }} />
+                        <ActiveLink href={`/volumes?selected=${props.keyx.id}`}>
+                            <Icon name="external" style={{color: "white", cursor: "pointer"}}/>
+                        </ActiveLink>
                     </Table.Cell>
                 </Table.Row>
             )
@@ -687,9 +789,9 @@ async function getLoginInfo() {
     const data = await res.json()
     return data;
 }
-function changeQueryString(searchString, documentTitle){      
-    documentTitle = typeof documentTitle !== 'undefined' ? documentTitle : document.title;      
-    var urlSplit=( window.location.href ).split( "?" );      
-    var obj = { Title: documentTitle, Url: urlSplit[0] + searchString };      
-    history.pushState(obj, obj.Title, obj.Url);      
+function changeQueryString(searchString, documentTitle) {
+    documentTitle = typeof documentTitle !== 'undefined' ? documentTitle : document.title;
+    var urlSplit = (window.location.href).split("?");
+    var obj = { Title: documentTitle, Url: urlSplit[0] + searchString };
+    history.pushState(obj, obj.Title, obj.Url);
 }

@@ -48,7 +48,7 @@ function DeploymentList() {
   }
   if (!deployments) deployments = []
   return (
-    <Table celled striped>
+    <Table celled striped selectable>
       <Table.Header>
         <Table.Row>
           <Table.HeaderCell>Name</Table.HeaderCell>
