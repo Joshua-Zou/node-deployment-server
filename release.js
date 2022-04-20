@@ -23,6 +23,7 @@ function copyFolderSync(from, to) {
             let config = JSON.parse(fs.readFileSync("./nds_config.json"));
             delete config.auth_secret_key
             config.deployments = [];
+            config.volumes = []
             fs.writeFileSync("../release/nds_config.json", JSON.stringify(config, null, 4));
         }
         return
