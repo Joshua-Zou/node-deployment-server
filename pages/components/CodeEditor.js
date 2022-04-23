@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic'
-const ReactAce = dynamic(import('React-Ace'), {ssr: false})
+const ReactAce = dynamic(import('React-Ace'), { ssr: false })
 
 import React, { Component } from 'react';
 
@@ -20,6 +20,8 @@ class CodeEditor extends Component {
           setOptions={{ useWorker: false }}
         />
       );
+    } else {
+      return <div></div>
     }
   }
 }

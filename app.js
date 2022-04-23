@@ -9,6 +9,9 @@ const handle = app.getRequestHandler()
 var Docker = require('dockerode');
 const archiver = require('archiver');
 const zipToTar = require('zip-to-tar');
+const volumeExplorer = require("volume-explorer");
+if (process.platform === "win32" || process.platform !== "linux") global.VolumeExplorer = new volumeExplorer();
+else global.VolumeExplorer = null;
 const crypto = require("crypto")
 const serviceWorker = require('./service');
 
@@ -290,6 +293,7 @@ function main() {
       }
 
     })
+    server.use("/static", express.static(__dirname + "/static"));
 
     server.all('*', (req, res) => {
       return handle(req, res)

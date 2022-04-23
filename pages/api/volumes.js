@@ -1,5 +1,7 @@
 const fs = require("fs");
 const crypto = require("crypto");
+const itob = require("istextorbinary")
+const archiver = require('archiver');
 
 export default async function handler(req, res) {
     let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
@@ -32,29 +34,29 @@ export default async function handler(req, res) {
 
         for (let i in volumes) {
             let volume = volumes[i];
-            let dockerVolume = dockerVolumes.find(x => x.Name === "nds-volume-"+volume.id);
+            let dockerVolume = dockerVolumes.find(x => x.Name === "nds-volume-" + volume.id);
             if (dockerVolume) {
                 volume.DockerInfo = dockerVolume;
             }
         }
-        return res.send({ data: volumes});
+        return res.send({ data: volumes });
     } else if (req.query.action === "deleteVolume") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
         }
-        let volume = docker.getVolume("nds-volume-"+req.query.id);
+        let volume = docker.getVolume("nds-volume-" + req.query.id);
         try {
-            await volume.remove({force: true})
+            await volume.remove({ force: true })
             removeFromDB();
-            return res.send({data: "Volume deleted!"});
-        } catch(err) {
+            return res.send({ data: "Volume deleted!" });
+        } catch (err) {
             if (err.toString().startsWith("Error: (HTTP code 404)")) {
                 removeFromDB();
-                return res.send({data: "Volume deleted!"});
+                return res.send({ data: "Volume deleted!" });
             }
             return res.send({ error: err.toString() });
         }
-        function removeFromDB(){
+        function removeFromDB() {
             let index = config.volumes.findIndex(x => x.id === req.query.id);
             if (index !== -1) {
                 config.volumes.splice(index, 1);
@@ -78,13 +80,90 @@ export default async function handler(req, res) {
         }
         let id = crypto.randomBytes(32).toString("hex");
         await docker.createVolume({
-            Name: "nds-volume-"+id
+            Name: "nds-volume-" + id
         })
         config.volumes.push({
             id: id,
             name: req.query.name
         })
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        return res.send({data: "Volume created!"});
+        return res.send({ data: "Volume created!" });
+    } else if (req.query.action === "getVolume") {
+        if (!req.query.id) return res.send({ error: "No id specified" });
+        let volume = config.volumes.find(x => x.id === req.query.id);
+        if (!volume) return res.send({ error: "Volume not found!" });
+        let dockerVolume = await docker.getVolume("nds-volume-" + volume.id);
+        dockerVolume = await dockerVolume.inspect();
+        var exploreSupported = false;
+        if (global.VolumeExplorer !== null) exploreSupported = true;
+        volume.exploreSupported = exploreSupported;
+        if (dockerVolume) {
+            volume.DockerInfo = dockerVolume;
+        }
+        return res.send({ data: volume });
+    } else if (req.query.action === "getFiles") {
+        if (!req.query.id) return res.send({ error: "No id specified" });
+        let volume = config.volumes.find(x => x.id === req.query.id);
+        if (!volume) return res.send({ error: "Volume not found!" });
+        let dockerVolume = await docker.getVolume("nds-volume-" + volume.id);
+        dockerVolume = await dockerVolume.inspect();
+        if (!dockerVolume) return res.send({ error: "Volume not found!" });
+        let files = await global.VolumeExplorer.volume(dockerVolume.Name).readDir(req.query.path);
+        for (let i in files) {
+            let file = files[i]
+            files[i] = await global.VolumeExplorer.volume(dockerVolume.Name).stat(req.query.path);
+            files[i].name = file.name
+            files[i].isDirectory = file.type === "directory"
+        }
+        return res.send({ data: files });
+    } else if (req.query.action === "getFile") {
+        let id = req.query.id;
+        let path = req.query.path;
+        if (!id) return res.send({ error: "No volume id specified" });
+        if (!path) return res.send({ error: "No path specified" });
+        try {
+            let file = await global.VolumeExplorer.volume("nds-volume-" + id).readFile(path);
+            res.header("Content-Disposition", "inline; filename=\"" + path.slice(path.lastIndexOf("/") + 1) + "\"");
+            if (itob.getEncoding(file) === "binary") {
+                return res.send(file);
+            } else {
+                return res.send(file.toString());
+            }
+        } catch (err) {
+            return res.send({ error: "File not found!" });
+        }
+    } else if (req.query.action === "getDownloadLink") {
+        if (!req.query.id) return res.send({ error: "No id specified" });
+        let volume = config.volumes.find(x => x.id === req.query.id);
+        if (!volume) return res.send({ error: "Volume not found!" });
+        let dockerVolume = await docker.getVolume("nds-volume-" + volume.id);
+        dockerVolume = await dockerVolume.inspect();
+        let id = req.query.id;
+        if (!dockerVolume) return res.send({ error: "Volume not found!" });
+        fs.rmSync("./static/tmp-volume-data/" + id, { recursive: true, force: true });
+        fs.mkdirSync("./static/tmp-volume-data/" + id);
+        await global.VolumeExplorer.volume(dockerVolume.Name).copyDir("/", "./static/tmp-volume-data/" + id + "/folder", function (status) {
+        })
+        await zipDirectory("./static/tmp-volume-data/" + id + "/folder", "./static/tmp-volume-data/" + id + "/archive.zip");
+        fs.rmSync("./static/tmp-volume-data/" + id + "/folder", { recursive: true, force: true });
+        return res.send({ data: `/api/volumes?auth=${req.query.auth}&action=download&id=${req.query.id}` });
+    } else if (req.query.action === "download") {
+        if (!req.query.id) return res.send({ error: "No id specified" });
+        return res.redirect("/static/tmp-volume-data/" + req.query.id + "/archive.zip");
     }
 }
+function zipDirectory(sourceDir, outPath) {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const stream = fs.createWriteStream(outPath);
+  
+    return new Promise((resolve, reject) => {
+      archive
+        .directory(sourceDir, false)
+        .on('error', err => reject(err))
+        .pipe(stream)
+        ;
+  
+      stream.on('close', () => resolve());
+      archive.finalize();
+    });
+  }

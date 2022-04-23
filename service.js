@@ -65,6 +65,18 @@ async function main(docker) {
             }
         })
 
+
+        // cleanup temp download files
+        let tempFiles = fs.readdirSync("./static/tmp-volume-data");
+        tempFiles.forEach(file => {
+            if (file !== ".gitkeep") {
+                console.log(fs.statSync("./static/tmp-volume-data/" + file).birthtimeMs, Date.now())
+                if (Date.now() - 1000 * 60 * 5 > fs.statSync("./static/tmp-volume-data/" + file).birthtimeMs) {
+                    fs.rmSync("./static/tmp-volume-data/" + file, { recursive: true, force: true });
+                }
+            }
+        })
+
         await sleep(60000);
     }
 }

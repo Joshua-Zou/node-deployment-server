@@ -6,6 +6,7 @@ import Header from "./components/Header/header.js"
 import { Icon, Table, Button, Input, Dropdown } from 'semantic-ui-react'
 import { useState } from 'react';
 import React from "react"
+import ActiveLink from './components/ActiveLink';
 
 export default function Volumes() {
     const [render, setRender] = useState(false);
@@ -51,7 +52,6 @@ function List() {
     }]);
     if (volumes[0] && volumes[0].loading) {
         getVolumes().then(data => {
-            console.log("asdfasdf", data)
             setVolumes(data)
         })
     }
@@ -64,6 +64,7 @@ function List() {
                         <Table.HeaderCell>Created</Table.HeaderCell>
                         <Table.HeaderCell>Status</Table.HeaderCell>
                         <Table.HeaderCell>Attached Deployment</Table.HeaderCell>
+                        <Table.HeaderCell>Actions</Table.HeaderCell>
                     </Table.Row>
                 </Table.Header>
 
@@ -88,14 +89,17 @@ function List() {
                                     <Table.Cell>{new Date(volume.DockerInfo.CreatedAt).toDateString()}</Table.Cell>
                                     <Table.Cell>{status}</Table.Cell>
                                     <Table.Cell>{volume.attachedDeployment}</Table.Cell>
-                                    <Table.Cell>
+                                    <Table.Cell style={{fontSize: "15px"}}>
                                         <a style={{ cursor: "pointer" }} onClick={async () => {
                                             if (!confirm("Are you sure you want to delete this volume? This action cannot be undone.")) return;
                                             let results = await fetch(`/api/volumes?auth=${getCachedAuth()}&action=deleteVolume&id=${volume.id}`);
                                             results = await results.json();
                                             alert(results.data || results.error);
                                             setVolumes(await getVolumes())
-                                        }}><Icon name='delete' />Delete</a>
+                                        }}><Icon name='trash alternate outline' /></a>
+                                        <ActiveLink href={"/explore/"+volume.id}>
+                                            <Icon name="compass outline" style={{marginLeft: "10px"}}/>
+                                        </ActiveLink>
                                     </Table.Cell>
                                 </Table.Row>
                             )
