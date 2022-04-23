@@ -90,6 +90,7 @@ function List() {
                                     <Table.Cell>{volume.attachedDeployment}</Table.Cell>
                                     <Table.Cell>
                                         <a style={{ cursor: "pointer" }} onClick={async () => {
+                                            if (!confirm("Are you sure you want to delete this volume? This action cannot be undone.")) return;
                                             let results = await fetch(`/api/volumes?auth=${getCachedAuth()}&action=deleteVolume&id=${volume.id}`);
                                             results = await results.json();
                                             alert(results.data || results.error);
