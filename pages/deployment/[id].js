@@ -747,7 +747,7 @@ function Settings() {
                                 })
                             }
                         }} />
-                        <ActiveLink href={`/volumes?selected=${props.keyx.id}`}>
+                        <ActiveLink href={`/explore/${props.keyx.id}`}>
                             <Icon name="external" style={{color: "white", cursor: "pointer"}}/>
                         </ActiveLink>
                     </Table.Cell>
