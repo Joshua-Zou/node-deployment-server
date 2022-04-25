@@ -7,5 +7,7 @@
         }
     ],
     "port": 3100,
-    "configFileVersion": 3
+    "configFileVersion": 5,
+    "deployments": [],
+    "volumes": []
 }
