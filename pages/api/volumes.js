@@ -93,7 +93,11 @@ export default async function handler(req, res) {
         let volume = config.volumes.find(x => x.id === req.query.id);
         if (!volume) return res.send({ error: "Volume not found!" });
         let dockerVolume = await docker.getVolume("nds-volume-" + volume.id);
-        dockerVolume = await dockerVolume.inspect();
+        try {
+            dockerVolume = await dockerVolume.inspect();
+        } catch(err) {
+            dockerVolume = null
+        }
         var exploreSupported = false;
         if (global.VolumeExplorer !== null) exploreSupported = true;
         volume.exploreSupported = exploreSupported;
