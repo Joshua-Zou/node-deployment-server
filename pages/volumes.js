@@ -125,7 +125,10 @@ async function getVolumes() {
     let deployments = await getDeployments()
     for (let i in volumes) {
         for (let p in deployments) {
-            if (deployments[p].volumes.find(x => x.id === volumes[i].DockerInfo.Name.slice("nds-config-".length))) {
+            if (deployments[p].volumes.find(x => {
+                if (!volumes[i].DockerInfo) return false;
+                else return x.id === volumes[i].DockerInfo.Name.slice("nds-config-".length)
+            })) {
                 volumes[i].attachedDeployment = deployments[p].name
             } else {
                 volumes[i].attachedDeployment = "N/A"
