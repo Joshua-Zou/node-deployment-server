@@ -82,6 +82,13 @@ Attach storage spaces (docker volumes) into your deployment, and mount them as f
 *Requires re-deploy to apply changes*  
 
 ## Update Guide
+### Updating from v1.4.2 to any later version:
+ 1. Log into an adnimistrator account in the NDS dashboard.
+ 2. If there is a newer version available, you will see a green arrow in the menu. 
+ 3. Click on this green arrow. You will be taken to the update page
+ 4. Click "Update" and confirm that you want to update. The system will automatically update!
+
+
 Updating to a newer version of NDS is simple! Simply follow the below steps:
 
  1. Download the latest version of NDS [here](https://github.com/Joshua-Zou/node-deployment-server/releases)
