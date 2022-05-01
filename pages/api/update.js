@@ -59,11 +59,10 @@ export default async function handler(req, res) {
     }
 }
 async function getLatestVersion() {
-    // let url = "https://api.github.com/repos/joshua-zou/node-deployment-server/releases/latest";
-    // let response = await fetch(url);
-    // let json = await response.json();
-    // let newestVersion = json.tag_name.slice(1);
-    let newestVersion = "1.3.3"
+    let url = "https://api.github.com/repos/joshua-zou/node-deployment-server/releases/latest";
+    let response = await fetch(url);
+    let json = await response.json();
+    let newestVersion = json.tag_name.slice(1);
     return newestVersion;
 }
 
