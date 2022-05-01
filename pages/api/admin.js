@@ -75,10 +75,11 @@ export default function handler(req, res) {
         console.log("This is pid " + process.pid);
         setTimeout(function () {
             process.on("exit", function () {
-                require("child_process").spawn(process.argv.shift(), process.argv, {
+                require("child_process").spawn("npm", ["run", "start"], {
                     cwd: process.cwd(),
                     detached: true,
-                    stdio: "inherit"
+                    stdio: "inherit",
+                    shell: true
                 });
             });
             process.exit();

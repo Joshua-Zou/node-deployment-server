@@ -22,6 +22,7 @@ export default function Header() {
                         <ActiveLink className={styles.username} href="/dashboard">Deployments</ActiveLink>
                         <ActiveLink className={styles.username} href="/admin"><Icon name="user"/>{props.data.user}</ActiveLink>
                         <a className={styles.logout} onClick={() => {sessionStorage.removeItem("auth"); localStorage.removeItem("auth"); window.location.href="/"}}>Logout</a>
+                        <AdminUpdateLink/>
                     </div>
                 )
             } else {
@@ -72,6 +73,24 @@ export default function Header() {
         }
     }
 }
+function AdminUpdateLink(){
+    const [needUpdate, setNeedUpdate] = useState({loading: true, update: false});
+    if (needUpdate.loading === true) {
+        fetch(`/api/update?auth=${getCachedAuth()}&action=getIfNeedUpdate`).then(res => res.json()).then(data => {
+            setNeedUpdate({
+                update: data.data || false
+            });
+        })
+    }
+    if (needUpdate.update) {
+        return (
+            <ActiveLink className={styles.username} href="/admin/update"><Icon name="arrow alternate circle up" style={{color: "#18f218"}} title="Update Available!"/></ActiveLink>
+        )
+    } else {
+        return <div></div>
+    }
+}
+
 
 async function getLoginInfo() {
     const res = await fetch(`/api/user?auth=${getCachedAuth()}`);
