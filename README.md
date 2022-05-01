@@ -88,7 +88,7 @@ Attach storage spaces (docker volumes) into your deployment, and mount them as f
  3. Click on this green arrow. You will be taken to the update page
  4. Click "Update" and confirm that you want to update. The system will automatically update!
 
-
+### Legacy Update system
 Updating to a newer version of NDS is simple! Simply follow the below steps:
 
  1. Download the latest version of NDS [here](https://github.com/Joshua-Zou/node-deployment-server/releases)
