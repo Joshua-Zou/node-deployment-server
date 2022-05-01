@@ -86,17 +86,20 @@ var copyRecursiveSync = function (src, dest, base) {
     var stats = exists && fs.statSync(src);
     var isDirectory = exists && stats.isDirectory();
     if (isDirectory) {
-        if (dest.endsWith("deployments") || dest.endsWith("node_modules") || dest === base) return;
-        try {
-            fs.rmSync(dest, { recursive: true, force: true });
-        } catch (err) { }
-        fs.mkdirSync(dest);
+        if (dest.endsWith("deployments") || dest.endsWith("node_modules")) return;
+        if (dest !== base) {
+            try {
+                fs.rmSync(dest, { recursive: true, force: true });
+            } catch (err) { }
+            fs.mkdirSync(dest);
+        }
         fs.readdirSync(src).forEach(function (childItemName) {
             copyRecursiveSync(path.join(src, childItemName),
                 path.join(dest, childItemName), base);
         });
     } else {
         if (dest.endsWith("nds_config.json") || dest.endsWith("UPDATE_SERVER.js")) return;
+        console.log("Copying " + src + " to " + dest);
         fs.copyFileSync(src, dest);
     }
 };
