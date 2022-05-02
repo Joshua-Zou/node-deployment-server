@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
 
     if (req.query.action === "getIfNeedUpdate") {
-        let newestVersion = await getLatestVersion();
+        let newestVersion = global.latestVersion;
         let currentVersion = fs.readFileSync("./VERSION", "utf8").slice(1);
         if (versionCompare(newestVersion, currentVersion) > 0) {
             return res.send({ data: newestVersion });
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
             return res.send({ data: false });
         }
     } else if (req.query.action === "getLatestVersion") {
-        let newestVersion = await getLatestVersion();
+        let newestVersion = global.latestVersion;
         return res.send({ data: newestVersion });
     } else if (req.query.action === "update") {
         res.send({ data: "Updating..." });
@@ -57,13 +57,6 @@ export default async function handler(req, res) {
         });
         process.exit();
     }
-}
-async function getLatestVersion() {
-    let url = "https://api.github.com/repos/joshua-zou/node-deployment-server/releases/latest";
-    let response = await fetch(url);
-    let json = await response.json();
-    let newestVersion = json.tag_name.slice(1);
-    return newestVersion;
 }
 
 function versionCompare(v1, v2, options) {

@@ -1,11 +1,20 @@
 const fs = require("fs");
+const fetch = require("node-fetch")
 const currentConfigFileVersion = 5;
 
 var run = true;
+var clck = 0;
 
 async function main(docker) {
     while (true) {
         if (!run) break;
+
+        if (clck % 10 == 0) {
+            global.latestVersion = await getLatestVersion();
+            clck = 0;
+        }
+        clck += 1;
+
         let config = JSON.parse(fs.readFileSync("./nds_config.json"));
         // garbage manager
         let deploymentFolders = getDirectories("./deployments");
@@ -97,6 +106,13 @@ function getDirectories(path) {
     return fs.readdirSync(path).filter(function (file) {
         return fs.statSync(path + '/' + file).isDirectory();
     });
+}
+async function getLatestVersion() {
+    let url = "https://api.github.com/repos/joshua-zou/node-deployment-server/releases/latest";
+    let response = await fetch(url);
+    let json = await response.json();
+    let newestVersion = json.tag_name.slice(1);
+    return newestVersion;
 }
 
 module.exports.start = function(docker, errFunction){
