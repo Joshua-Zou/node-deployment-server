@@ -1,5 +1,12 @@
 const fs = require("fs");
 const path = require("path")
+const child_process = require("child_process");
+
+if (fs.existsSync("./.next")) {
+    fs.rmdirSync("./.next", { recursive: true });
+}
+console.log("Building...")
+child_process.execSync("npm run build");
 
 if (fs.existsSync("../release")) {
     fs.rmdirSync("../release", { recursive: true });
@@ -13,6 +20,8 @@ fs.readdir('./', (err, files) => {
         copyFolderSync(`./${file}`, `../release/${file}`);
     })
 });
+
+if (fs.existsSync("../release.zip")) fs.unlinkSync("../release.zip");
 
 
 
