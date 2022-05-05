@@ -64,7 +64,7 @@ function DeploymentList() {
         {
           deployments.map((deployment, key) => {
             return (
-              <Table.Row key={key} onClick={() => {router.push("/deployment/"+deployment.id)}} style={{cursor: "pointer"}}>
+              <Table.Row positive={deployment.status === "running"} error={deployment.status === "failed to start"} warning={deployment.status === "waiting for initialization"} key={key} onClick={() => {router.push("/deployment/"+deployment.id)}} style={{cursor: "pointer"}}>
                 <Table.Cell>{deployment.name}</Table.Cell>
                 <Table.Cell>{deployment.status}</Table.Cell>
                 <Table.Cell>Internal: {deployment.internalPort} | External: {deployment.externalPort}</Table.Cell>
