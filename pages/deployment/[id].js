@@ -556,6 +556,7 @@ function Settings() {
         return (
             <div>
                 <Button inverted color='red' onClick={() => {
+                    if (!confirm("Are you sure you want to restart this deployment?")) return;
                     fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=restart`).then(res => res.json()).then(json => {
                         if (json.error) alert(json.error);
                         else {
@@ -567,6 +568,7 @@ function Settings() {
                     Restart Deployment
                 </Button>
                 <Button inverted color='red' style={{ marginLeft: "15px" }} onClick={() => {
+                    if (!confirm("Are you absolutely sure you want to delete this deployment?")) return;
                     fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=delete`).then(res => res.json()).then(json => {
                         if (json.error) alert(json.error);
                         else {
@@ -658,18 +660,18 @@ function Settings() {
     }
     function Volumes(props) {
         const [selectableVolumes, setSelectableVolumes] = useState([
-            { loading: "true", key: "."}
+            { loading: "true", key: "." }
         ]);
         const [allVolumes, setAllVolumes] = useState([]);
         const [selectedVolume, setSelectedVolume] = useState("");
-        var varValue = "/var/volumes/"+selectedVolume.text
+        var varValue = "/var/volumes/" + selectedVolume.text
 
         if (selectableVolumes[0] && selectableVolumes[0].loading) {
             fetch(`/api/volumes?auth=${getCachedAuth()}&action=listVolumes`).then(res => res.json()).then(json => {
                 setAllVolumes(json.data)
                 let volumes = [];
                 json.data.forEach(v => {
-                    if (!props.deployment.volumes.find(d => d.id === v.id)) volumes.push({key: v.id, text: v.name, value: v.id})
+                    if (!props.deployment.volumes.find(d => d.id === v.id)) volumes.push({ key: v.id, text: v.name, value: v.id })
                 })
                 setSelectableVolumes(volumes);
             })
@@ -691,10 +693,10 @@ function Settings() {
                             <Table.Cell>
                                 <Dropdown placeholder='Storage Space Name' search selection options={selectableVolumes} onChange={(e, d) => {
                                     setSelectedVolume(selectableVolumes.find(v => v.value === d.value))
-                                }}/>
+                                }} />
                                 <Icon name="arrow right" style={{ color: "white", fontSize: "1.1em", position: "relative", left: "12px" }} />
                             </Table.Cell>
-                            <Table.Cell><Input placeholder="Mount Location" defaultValue={"/var/volumes/"+selectedVolume.text} key={selectedVolume.text} onChange={(e, d) => varValue = d.value} /></Table.Cell>
+                            <Table.Cell><Input placeholder="Mount Location" defaultValue={"/var/volumes/" + selectedVolume.text} key={selectedVolume.text} onChange={(e, d) => varValue = d.value} /></Table.Cell>
                             <Table.Cell><Button content="Add" primary inverted onClick={() => {
                                 fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&volumeId=${selectedVolume.value}&mountpoint=${varValue}&action=updateAttachedVolume&index=${"new"}`).then(res => res.json()).then(json => {
                                     if (json.error) alert(json.error);
@@ -734,7 +736,7 @@ function Settings() {
                         <Icon name="edit" style={{ color: "white", cursor: "pointer" }} onClick={(e) => {
                             setDisabled(false)
                         }} />
-                        <Icon name="delete" style={{ color: "white", cursor: "pointer", fontSize: "1.2em", position: "relative", top: "2px"}} onClick={() => {
+                        <Icon name="delete" style={{ color: "white", cursor: "pointer", fontSize: "1.2em", position: "relative", top: "2px" }} onClick={() => {
                             if (confirm("Are you sure you want to detach this storage space?")) {
                                 fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&index=${props.index}&action=deleteAttachedVolume`).then(res => res.json()).then(json => {
                                     if (json.error) alert(json.error);
@@ -748,7 +750,7 @@ function Settings() {
                             }
                         }} />
                         <ActiveLink href={`/explore/${props.keyx.id}`}>
-                            <Icon name="external" style={{color: "white", cursor: "pointer"}}/>
+                            <Icon name="external" style={{ color: "white", cursor: "pointer" }} />
                         </ActiveLink>
                     </Table.Cell>
                 </Table.Row>
