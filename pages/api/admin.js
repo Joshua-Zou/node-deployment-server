@@ -65,14 +65,13 @@ export default function handler(req, res) {
     } else if (req.query.action === "changePort") {
         let newPort = req.query.port;
         newPort = Number(newPort);
-        if (newPort > 65535) {
-            return res.send({ error: "Port must be between 1 and 65535" });
+        if (newPort > 65535 || newPort < 10) {
+            return res.send({ error: "Port must be between 10 and 65535" });
         }
         config.port = newPort;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Success! Port has been updated! Restart the server to apply the changes!" });
     } else if (req.query.action === "restartServer") {
-        console.log("This is pid " + process.pid);
         setTimeout(function () {
             process.on("exit", function () {
                 require("child_process").spawn("npm", ["run", "start"], {
