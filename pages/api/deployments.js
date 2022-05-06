@@ -137,7 +137,6 @@ export default async function handler(req, res) {
         let zipPath = data.files.zip.filepath;
         await extract(zipPath, { dir: global.projectRoot+"/deployments/"+id })
         let folderName = data.files.zip.originalFilename.slice(0, -4);
-        console.log(zipPath, folderName)
 
         fs.rmSync(`${global.projectRoot}/deployments/${id}/code`, { recursive: true, force: true });
         fs.renameSync(`${global.projectRoot}/deployments/${id}/${folderName}`, `${global.projectRoot}/deployments/${id}/code`)

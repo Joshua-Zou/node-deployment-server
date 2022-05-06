@@ -101,9 +101,13 @@ function Explore(props) {
                                 <Icon name="level up" onClick={moveUp} style={{ float: "right", cursor: "pointer" }} />
                                 <Icon name="download" style={{ float: "right", cursor: "pointer" }} onClick={async () => {
                                     setDownloading(true)
-                                    let link = await getDownloadLink(id)
-                                    setDownloading(false)
-                                    window.open(link)
+                                    let link = await getDownloadLink(id, path)
+                                    setDownloading(false);
+                                    let downloadLink = document.createElement("a");
+                                    downloadLink.href = link;
+                                    downloadLink.download =  props.data.name + "-" + path.slice(1);
+                                    document.body.appendChild(downloadLink);
+                                    downloadLink.click();
                                 }}></Icon>
                             </Table.HeaderCell>
                         </Table.Row>
@@ -186,7 +190,6 @@ function Explore(props) {
                             loading: false
                         }])
                     } else {
-                        console.log(data.data)
                         setFiles(data.data)
                     }
                 })
@@ -195,8 +198,8 @@ function Explore(props) {
 }
 
 
-async function getDownloadLink(id) {
-    let link = await fetch(`/api/volumes?auth=${getCachedAuth()}&action=getDownloadLink&id=${id}`)
+async function getDownloadLink(id, path) {
+    let link = await fetch(`/api/volumes?auth=${getCachedAuth()}&action=getDownloadLink&id=${id}&path=${path}`)
     link = await link.json()
     if (link.error) return alert(link.error)
     else return link.data
@@ -217,7 +220,6 @@ async function getVolume(id) {
         volume.DockerInfo = { CreatedAt: "" }
         volume.status = "Volume not found on Docker Engine!"
     }
-    console.log(volume)
     return volume;
 }
 async function getDeployments() {

@@ -146,7 +146,8 @@ export default async function handler(req, res) {
         if (!dockerVolume) return res.send({ error: "Volume not found!" });
         fs.rmSync("./static/tmp-volume-data/" + id, { recursive: true, force: true });
         fs.mkdirSync("./static/tmp-volume-data/" + id);
-        await global.VolumeExplorer.volume(dockerVolume.Name).copyDir("/", "./static/tmp-volume-data/" + id + "/folder", function (status) {
+        if (!req.query.path) req.query.path = "/";
+        await global.VolumeExplorer.volume(dockerVolume.Name).copyDir(req.query.path, "./static/tmp-volume-data/" + id + "/folder", function (status) {
         })
         await zipDirectory("./static/tmp-volume-data/" + id + "/folder", "./static/tmp-volume-data/" + id + "/archive.zip");
         fs.rmSync("./static/tmp-volume-data/" + id + "/folder", { recursive: true, force: true });
