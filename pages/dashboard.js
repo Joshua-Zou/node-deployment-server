@@ -63,10 +63,15 @@ function DeploymentList() {
       <Table.Body>
         {
           deployments.map((deployment, key) => {
+            var icons = {
+              "running": "checkmark",
+              "failed to start": "attention",
+              "waiting for initialization": "attention",
+            }
             return (
               <Table.Row positive={deployment.status === "running"} error={deployment.status === "failed to start"} warning={deployment.status === "waiting for initialization"} key={key} onClick={() => {router.push("/deployment/"+deployment.id)}} style={{cursor: "pointer"}}>
                 <Table.Cell>{deployment.name}</Table.Cell>
-                <Table.Cell>{deployment.status}</Table.Cell>
+                <Table.Cell><Icon name={icons[deployment.status]} style={{verticalAlign: "text-top"}}/>{deployment.status}</Table.Cell>
                 <Table.Cell>Internal: {deployment.internalPort} | External: {deployment.externalPort}</Table.Cell>
                 <Table.Cell>{deployment.memory} MB</Table.Cell>
                 <Table.Cell>{deployment.fullRunCommand}</Table.Cell>
