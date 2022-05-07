@@ -236,6 +236,8 @@ function main() {
             sendSSE("\u001b[34m Starting bash...\u001b[0m");
           });
         });
+      }).catch(err => {
+        sendSSE("\u001b[31m Error starting bash: " + err.toString() + "\u001b[0m");
       })
       res.send({})
     })
