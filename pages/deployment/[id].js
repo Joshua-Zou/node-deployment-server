@@ -751,6 +751,11 @@ function Bash() {
             if (consoleStream.current !== null) {
                 consoleStream.current.close();
             }
+            try {
+                fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id+"&cmd=exit", { method: "POST" }).then(res => res.json()).then(json => {
+                    console.log(json)
+                })
+            }catch(err){}
         }
     }, [])
     if (startedStream === false) {
