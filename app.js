@@ -24,8 +24,8 @@ const server = express()
 var httpServer = null;
 var buildListeners = {};
 var runListeners = {};
-
-
+var bashListeners = {};
+var bashStdin = {};
 
 
 function main() {
@@ -99,16 +99,7 @@ function main() {
       //buildStream.pipe(process.stdout)
       buildStream.on('data', function (e) {
         var text = e.toString();
-        let multipleLines = text.split("\n");
-        multipleLines.forEach(line => {
-          try {
-            let json = JSON.parse(line.toString());
-            if (json.stream) line = json.stream
-            sendSSE(line);
-          } catch (err) {
-            sendSSE(line);
-          }
-        })
+        sendSSE(text);
       })
       await new Promise((resolve, reject) => {
         docker.modem.followProgress(buildStream, (err, res) => err ? reject(err) : resolve(res));
@@ -197,7 +188,62 @@ function main() {
 
 
     })
-    server.post("/api/deployment/exec", async (req, res) => {
+    server.post("/api/deployment/startbash", async (req, res) => {
+      let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+      if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+      if (!config.auth_secret_key) {
+        let authkey = crypto.randomBytes(32).toString("hex");
+        config.auth_secret_key = authkey;
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+      }
+      var user = null;
+      for (let i in config.authorized_users) {
+        let testUser = config.authorized_users[i];
+        let hash = crypto.createHash('sha256');
+        let userkey = hash.update(testUser.username);
+        userkey = hash.update(testUser.password);
+        userkey = hash.update(config.auth_secret_key);
+        if (!req.query.auth) req.query.auth
+        if (userkey.digest('hex') === req.query.auth) {
+          user = testUser
+          break;
+        }
+      }
+      if (user === null) return res.send({ error: "Invalid authkey" });
+      if (user.permission !== "admin" && user.permission !== "readwrite") return res.send({ error: "User does not have adequate permissions to complete this action!" });
+      let id = req.query.id;
+      let deployment = config.deployments.find(d => d.id === id);
+      if (!deployment) return res.send({ error: "Deployment not found!" });
+
+      let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+
+      function sendSSE(text) {
+        if (!bashListeners[id]) return;
+        sendEventsToAll(text, bashListeners[id])
+      }
+      new Promise(async (resolve, reject) => {
+        let container = docker.getContainer(`nds-container-${req.query.id}`);
+        container.exec({ Cmd: ["/bin/bash"], AttachStdin: true, AttachStdout: true, AttachStderr: true, Env: ["TERM=xterm"], Tty: true}, function (err, exec) {
+          if (err) return reject(err);
+          exec.start({ hijack: true, stdin: true }, function (err, stream) {
+            stream.on("data", function(data) {
+              console.log(data.toString());
+              sendSSE(data.toString());
+            })
+            bashStdin[id] = function(text) {
+              stream.write(text+"\n");
+            }
+            sendSSE("\u001b[34m Starting bash...\u001b[0m");
+          });
+        });
+      }).then(data => {
+        res.send({ data: data });
+      }).catch(err => {
+        res.send({ error: err.toString() });
+      })
+      res.send({})
+    })
+    server.post("/api/deployment/runBashCmd", async (req, res) => {
       let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
       if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
       if (!config.auth_secret_key) {
@@ -225,32 +271,15 @@ function main() {
       if (!deployment) return res.send({ error: "Deployment not found!" });
       if (!req.query.cmd) return res.send({ error: "No command specified!" });
 
-      let deploymentIndex = config.deployments.findIndex(d => d.id === id);
-
-      function sendSSE(text) {
-        if (!runListeners[id]) return;
-        sendEventsToAll(text, runListeners[id])
+      if (bashStdin[id]) {
+        bashStdin[id](req.query.cmd);
       }
-      await new Promise(async (resolve, reject) => {
-        let container = docker.getContainer(`nds-container-${req.query.id}`);
-        container.exec({ Cmd: req.query.cmd.split(" "), AttachStdin: true, AttachStdout: true }, function (err, exec) {
-          if (err) return reject(err);
-          exec.start({ hijack: true, stdin: true }, function (err, stream) {
-            stream.on("data", function(data) {
-              console.log(data.toString());
-              sendSSE("\u123e \u001b[32m"+data.toString());
-            })
-            sendSSE("\u123e \u001b[34m Starting command execution... ")
-          });
-        });
-      }).then(data => {
-        res.send({ data: data });
-      }).catch(err => {
-        res.send({ error: err.toString() });
-      })
+      return res.send({})
     })
+    
     server.get("/api/deployment/buildLog", buildEventsHandler)
     server.get("/api/deployment/runLogs", runEventsHandler)
+    server.get("/api/deployment/bashLogs", bashEventsHandler)
     server.get("/api/deployment/oldRunLogs", async (req, res) => {
       let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
       if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
@@ -281,12 +310,6 @@ function main() {
       try {
         let logs = await container.logs({ stdout: true, stderr: true, tail: 1000 })
         logs = logs.toString();
-        logs = logs.replace(/\u0001\u0000\u0000\u0000\u0000\u0000\u0000\?/g, "")
-        logs = logs.replace(/\u0001/g, "")
-        logs = logs.replace(/\u0000/g, "")
-        logs = logs.replace(/\u0016/g, "")
-        logs = logs.replace(/\u0010/g, "")
-        logs = logs.replace(/\u0007/g)
         return res.send({ data: logs });
       } catch (err) {
         return res.send({ data: "" })
@@ -334,7 +357,9 @@ main();
 
 
 function sendEventsToAll(text, clients) {
-  text = text.replaceAll("\n", "\\u000a")
+  text = text.replaceAll("\r\n", "\u16E3")
+  text = text.replaceAll("\n", "\u16E3")
+  text = text.replaceAll("\r", "\u16E3")
   clients.forEach(client => client.response.write(`data: ${text}\n\n`))
 }
 function runEventsHandler(request, response, next) {
@@ -455,6 +480,63 @@ function buildEventsHandler(request, response, next) {
   request.on('close', () => {
     console.log(`${clientId} Connection closed`);
     buildListeners[id] = buildListeners[id].filter(client => client.id !== clientId);
+  });
+}
+function bashEventsHandler(request, response, next) {
+  var req = request;
+  var res = response;
+  let config = JSON.parse(fs.readFileSync("./nds_config.json", "utf8"));
+  if (!config.authorized_users) return res.status(500).send({ error: "No authorized users defined in nds_config.json" });
+  if (!config.auth_secret_key) {
+    let authkey = crypto.randomBytes(32).toString("hex");
+    config.auth_secret_key = authkey;
+    fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+  }
+  var user = null;
+  for (let i in config.authorized_users) {
+    let testUser = config.authorized_users[i];
+    let hash = crypto.createHash('sha256');
+    let userkey = hash.update(testUser.username);
+    userkey = hash.update(testUser.password);
+    userkey = hash.update(config.auth_secret_key);
+    if (!req.query.auth) req.query.auth
+    if (userkey.digest('hex') === req.query.auth) {
+      user = testUser
+      break;
+    }
+  }
+  if (user === null) return res.send({ error: "Invalid authkey" });
+  if (user.permission === "readonly") return res.send({ error: "You do not have permission to run bash commands!" });
+  let id = req.query.id;
+  let deployment = config.deployments.find(d => d.id === id);
+  if (!deployment) return res.send({ error: "Deployment not found!" });
+
+  if (!bashListeners[id]) bashListeners[id] = [];
+
+
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache'
+  };
+  response.writeHead(200, headers);
+
+  const data = `data: Successfully established write stream with server\n\n`;
+
+  response.write(data);
+
+  const clientId = Date.now();
+
+  const newClient = {
+    id: clientId,
+    response
+  };
+
+  bashListeners[id].push(newClient);
+
+  request.on('close', () => {
+    console.log(`${clientId} Connection closed`);
+    bashListeners[id] = bashListeners[id].filter(client => client.id !== clientId);
   });
 }
 function zipDirectory(sourceDir, outPath) {

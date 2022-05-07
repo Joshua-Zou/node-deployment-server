@@ -55,3 +55,18 @@ main {
   bottom: 40px;
   transition: all 0.5s ease 0s;
 }
+#terminal {
+  width: 80vw;
+  max-width: 1200px;
+  position: absolute;
+  display: block;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+
+.xterm-viewport::-webkit-scrollbar {
+  background-color: #424e8f;
+  width: 5px;
+}
+

@@ -3,6 +3,7 @@
     border-bottom: 1px solid grey;
     font-size: 1.3em;
 }
+
 .header span {
     width: 100px;
     text-align: center;
@@ -12,6 +13,7 @@
     padding-bottom: 15px;
     padding-top: 15px;
 }
+
 .header span::after {
     content: "";
     position: absolute;
@@ -22,16 +24,20 @@
     opacity: 0;
     transition: 0.5s opacity;
 }
+
 .header span:hover::after {
     opacity: 1;
 }
+
 .onpage {
     color: #78c3ff !important;
 }
+
 .onpage::after {
     background-color: #78c3ff !important;
     opacity: 1 !important;
 }
+
 .exploreRow {
     cursor: pointer;
 }
@@ -39,6 +45,7 @@
 .deployConsole {
     margin-top: 30px;
 }
+
 .console {
     width: 100%;
     height: 500px;
@@ -49,11 +56,41 @@
     background-color: rgb(231, 231, 231);
     color: black;
 }
+
 .console span {
     display: block;
 }
+
 .settingsSection {
     padding-bottom: 10px;
     border-bottom: 1px solid white;
     margin-bottom: 40px;
+}
+
+.inputText {
+    width: calc(80vw);
+    max-width: 1200px;
+    position: absolute;
+    display: flex;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 383px;
+    background-color: black;
+}
+
+.inputText input {
+    background-color: black;
+    border: none;
+    color: white;
+    padding: 0px 5px;
+    width: calc(100% - 10px);
+    flex-grow: 1;
+}
+.inputText input:focus-visible {
+    border: none !important;
+    outline: none !important;
+}
+.inputText input:focus {
+    border: none !important;
+    outline: none !important;
 }

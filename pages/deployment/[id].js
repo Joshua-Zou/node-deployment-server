@@ -11,7 +11,11 @@ import styles from "../../styles/deployment.module.css"
 import Ansi from "ansi-to-react";
 import unescapejs from "unescape-js"
 import ActiveLink from '../components/ActiveLink.js';
-
+import dynamic from "next/dynamic";
+const DynamicTerminal = dynamic(() => import("../components/Terminal"), {
+    ssr: false
+});
+const nbsp = "\u00A0"
 var id = ""
 
 export default function Deployment(props) {
@@ -28,10 +32,9 @@ export default function Deployment(props) {
             changeQueryString("")
         })
     }
-
     const [tabIndex, setTabIndex] = useState(0)
-    const tabs = [<Explore key="0" />, <Deploy key="1" />, <Console key="2" />, <Settings key="3" />];
-    const tabNames = ["Explore", "Deploy", "Console", "Settings"]
+    const tabs = [<Explore key="0" />, <Deploy key="1" />, <Console key="2" />, <Settings key="3" />, <Bash key="4" />];
+    const tabNames = ["Explore", "Deploy", "Console", "Settings", "Bash" + nbsp + nbsp + nbsp]
     return (
         <div>
             <Head>
@@ -181,8 +184,8 @@ function Deploy() {
             </div>
         )
     })
+    const consoles = useRef(null);
     const [consoleVisible, setConsoleVisible] = useState(false)
-    const [dconsole, setConsole] = useState(["Loading..."]);
     const [queried, setQueried] = useState(false)
     var evtSource = useRef(null);
     useEffect(() => {
@@ -193,8 +196,9 @@ function Deploy() {
         }
     }, [])
     function newLog(log) {
+        log = log.replaceAll("\u16E3", "\n")
         log = unescapejs(log)
-        setConsole(dconsole => [...dconsole, log]);
+        consoles.current.newLine(log)
     }
     if (!queried) {
         getDeploymentInformation(id).then(data => {
@@ -234,7 +238,7 @@ function Deploy() {
             </form>
             <h3>Deploy</h3>
             {DButton}
-            <DeployConsole visible={consoleVisible} logs={dconsole} text="Build & Deployment Logs" />
+            <DeployConsole visible={consoleVisible} ref={consoles} text="Build & Deployment Logs" />
         </div>
     )
     async function initDeploy() {
@@ -242,7 +246,7 @@ function Deploy() {
         evtSource.current = new EventSource('/api/deployment/buildLog?auth=' + getCachedAuth() + "&id=" + id);
         evtSource.current.onmessage = function (e) {
             console.log(e.data)
-            newLog(e.data.replaceAll("\\u000a", "\n"))
+            newLog(e.data)
         }
         let results = await fetch(`/api/deployment/deploy?auth=${getCachedAuth()}&id=${id}`, {
             method: "POST"
@@ -256,52 +260,50 @@ function Deploy() {
 class DeployConsole extends React.Component {
     constructor(props) {
         super(props);
-        // // create a ref to store the textInput DOM element
-        this.messageContainer = React.createRef();
-        this.scrollToBottom = this.scrollToBottom.bind(this);
-        this.stickToBottom = true
+        this.newLine = this.newLine.bind(this);
+        this.state = {
+            newText: ""
+        }
+        this.editorRef = React.createRef();
+        this.logQueue = [];
+        this.startedEmptyingQueue = false;
     }
-    scrollToBottom = () => {
-        if (!this.messageContainer.current) return;
-        if (!this.stickToBottom) return;
-        this.messageContainer.current.scrollTop = this.messageContainer.current.scrollHeight;
-
-    }
-    componentDidMount() {
-        this.scrollToBottom();
-    }
-
-    componentDidUpdate() {
-        this.scrollToBottom();
+    newLine(text) {
+        if (this.editorRef.current === null) {
+            this.logQueue.push(text);
+        } else {
+            if (this.startedEmptyingQueue === false) {
+                this.startedEmptyingQueue = true;
+                this.logQueue.forEach(line => {
+                    this.setState({
+                        newText: {
+                            id: Math.random(),
+                            text: line
+                        }
+                    })
+                })
+            }
+            this.setState({
+                newText: {
+                    id: Math.random(),
+                    text: text
+                }
+            })
+        }
     }
     render() {
         if (this.props.visible === false) return <div></div>
-        var self = this;
         return (
             <div className={styles.deployConsole}>
                 <h2>{this.props.text}</h2>
-                <div className={styles.console} ref={this.messageContainer}>
-                    {this.props.logs.map((log, index) => {
-                        var element = <Ansi>{log}</Ansi>
-                        //var element = log
-                        return (
-                            <span key={index}>
-                                {
-                                    element
-                                }
-                            </span>
-                        )
-                    })}
-                </div>
-                <div style={{ marginTop: "10px", textAlign: "right" }}>
-                    <Checkbox defaultChecked onChange={(e, d) => self.stickToBottom = d.checked} /> <span style={{ verticalAlign: "top" }}>Stick to bottom</span>
-                </div>
+                <DynamicTerminal newText={this.state.newText} customRef={this.editorRef} />
             </div>
         )
     }
 }
 function Console() {
-    const [dconsole, setConsole] = useState(["Loading..."]);
+    const [startedStream, setStartedStream] = useState(false);
+    const consoles = useRef(null);
     var consoleStream = useRef(null);
     useEffect(() => {
         return () => {
@@ -310,30 +312,14 @@ function Console() {
             }
         }
     }, [])
-    if (dconsole[dconsole.length - 1] === "Loading...") {
+    if (startedStream === false) {
+        setStartedStream(true)
         initEventStream();
     }
-    const [runCmd, setRunCmd] = useState("");
 
     return (
         <div>
-            <DeployConsole visible={true} logs={dconsole} text="Application Logs" />
-            <Input style={{ width: "50%" }} placeholder='ls' labelPosition='right' onChange={(e, d) => setRunCmd(d.value)}>
-                <Label>
-                    <span style={{ verticalAlign: "middle" }}>Run Command</span>
-                </Label>
-                <input />
-                <Label style={{ padding: 0 }}>
-                    <Button color="blue" content="Run" style={{ margin: 0, height: "100%", borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }} onClick={() => {
-                        fetch(`/api/deployment/exec?auth=${getCachedAuth()}&id=${id}&cmd=${encodeURIComponent(runCmd)}`, {
-                            method: "POST"
-                        }).then(data => data.json()).then(data => {
-                            if (data.error) return setConsole(dconsole => [...dconsole, "\u001b[31m" + data.error]);
-                            else setConsole(dconsole => [...dconsole, data.stdout]);
-                        })
-                    }} />
-                </Label>
-            </Input>
+            <DeployConsole visible={true} text="Application Logs" ref={consoles} />
         </div>
     )
 
@@ -343,24 +329,20 @@ function Console() {
         let oldLogs = await fetch('/api/deployment/oldRunLogs?auth=' + getCachedAuth() + "&id=" + id)
         oldLogs = await oldLogs.json();
         if (oldLogs.data) {
-            oldLogs.data = oldLogs.data.replaceAll("\\u000a", "\n")
+            oldLogs.data = oldLogs.data
             let logs = oldLogs.data.split("\n")
             logs.forEach(l => newLog(l))
         }
         consoleStream.current = new EventSource('/api/deployment/runLogs?auth=' + getCachedAuth() + "&id=" + id);
         consoleStream.current.onmessage = function (e) {
-            newLog(e.data.replaceAll("\\u000a", "\n"))
+            newLog(e.data)
         }
     }
     function newLog(log) {
-        if (!log.startsWith("\u123e")) {
-            log = unescapejs(log)
-            log = log.replace(/[\x00-\x08\x0E-\x1F\x7F-\uFFFF]/g, '')
-            log = log.replace(/\[0/g, "\u001b[0")
-        } else {
-            log = log.slice(2)
-        }
-        setConsole(dconsole => [...dconsole, log]);
+        log = log.replaceAll("\u16E3", "\n")
+        console.log(log)
+        log = unescapejs(log)
+        consoles.current.newLine(log)
     }
 }
 function Settings() {
@@ -758,6 +740,70 @@ function Settings() {
         }
     }
 }
+function Bash() {
+    const [startedStream, setStartedStream] = useState(false);
+    const [path, setPath] = useState("$");
+    const consoles = useRef(null);
+    var consoleStream = useRef(null);
+    var inputRef = useRef(null);
+    useEffect(() => {
+        return () => {
+            if (consoleStream.current !== null) {
+                consoleStream.current.close();
+            }
+        }
+    }, [])
+    if (startedStream === false) {
+        setStartedStream(true)
+        initEventStream();
+    }
+
+    return (
+        <div>
+            <DeployConsole visible={true} text="Bash" ref={consoles} />
+            <div className={styles.inputText}>
+                <span>{path}</span>
+                <input ref={inputRef} placeholder="command" onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                        newLog("$ "+inputRef.current.value);
+                        fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id+"&cmd="+inputRef.current.value, { method: "POST" }).then(res => res.json()).then(json => {
+                            console.log(json)
+                        })
+                        inputRef.current.value = "";
+                    }
+                }}/>
+            </div>
+        </div>
+    )
+
+
+
+    async function initEventStream() {
+        let startedBash = await fetch('/api/deployment/startbash?auth=' + getCachedAuth() + "&id=" + id, { method: "POST" });
+        startedBash = await startedBash.json();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (startedBash.error) {
+            newLog(startedBash.error);
+        } else {
+            newLog("Bash emulator has started!")
+        }
+        consoleStream.current = new EventSource('/api/deployment/bashLogs?auth=' + getCachedAuth() + "&id=" + id);
+        consoleStream.current.onmessage = function (e) {
+            newLog(e.data)
+        }
+    }
+    function newLog(log) {
+        log = log.replaceAll("\u16E3", "\n")
+        log = unescapejs(log)
+        let lastL = log.split("\n").at(-1).replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '').trim();
+        if (lastL.endsWith("#") && lastL.startsWith("root")) {
+            setPath(lastL)
+            log = log.slice(0, -lastL.length-1)
+        }
+        if (consoles && consoles.current && consoles.current.newLine) consoles.current.newLine(log);
+    }
+}
+
 
 function getCachedAuth() {
     if (typeof sessionStorage !== "undefined") {
