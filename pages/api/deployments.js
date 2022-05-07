@@ -124,28 +124,33 @@ export default async function handler(req, res) {
         let id = req.query.id;
         let deployment = config.deployments.find(d => d.id === id);
         if (!deployment) return res.send({ error: "Deployment not found!" });
-        
-
-        const data = await new Promise((resolve, reject) => {
-            const form = new IncomingForm()
-            
-            form.parse(req, (err, fields, files) => {
-              if (err) return reject(err)
-              resolve({ fields, files })
-            })
-          })
-        let zipPath = data.files.zip.filepath;
-        await extract(zipPath, { dir: global.projectRoot+"/deployments/"+id })
-        let folderName = data.files.zip.originalFilename.slice(0, -4);
-
-        fs.rmSync(`${global.projectRoot}/deployments/${id}/code`, { recursive: true, force: true });
-        fs.renameSync(`${global.projectRoot}/deployments/${id}/${folderName}`, `${global.projectRoot}/deployments/${id}/code`)
-        fs.unlinkSync(zipPath)
-        deployment.internalFolderName = folderName;
-        let deploymentIndex = config.deployments.findIndex(d => d.id === id);
-        config.deployments[deploymentIndex] = deployment;
-        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
+        try {          
+    
+            const data = await new Promise((resolve, reject) => {
+                const form = new IncomingForm()
+                
+                form.parse(req, (err, fields, files) => {
+                  if (err) return reject(err)
+                  resolve({ fields, files })
+                })
+              })
+            let zipPath = data.files.zip.filepath;
+            await extract(zipPath, { dir: global.projectRoot+"/deployments/"+id })
+            let folderName = data.files.zip.originalFilename.slice(0, -4);
+    
+            fs.rmSync(`${global.projectRoot}/deployments/${id}/code`, { recursive: true, force: true });
+            fs.renameSync(`${global.projectRoot}/deployments/${id}/${folderName}`, `${global.projectRoot}/deployments/${id}/code`)
+            fs.unlinkSync(zipPath)
+            deployment.internalFolderName = folderName;
+            let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+            config.deployments[deploymentIndex] = deployment;
+            fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+            return res.redirect("/deployment/"+id+"?page=1&message=Deployment uploaded successfully!");
+        } catch(err) {
+            fs.rmSync(`${global.projectRoot}/deployments/${id}`, { recursive: true });
+            fs.mkdirSync(`${global.projectRoot}/deployments/${id}`);
+            return res.send("Something went wrong! Your uploaded zip MUST be set up in a very specific way documented here: https://github.com/joshua-zou/node-deployment-server#deployment")
+        }
     } else if (req.query.action === "changePort") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
