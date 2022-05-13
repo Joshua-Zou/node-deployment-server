@@ -17,6 +17,7 @@ fs.readdir('./', (err, files) => {
     files.forEach(file => {
         if (file === "node_modules") return;
         if (file === ".git") return;
+        if (file === "log.txt") return;
         copyFolderSync(`./${file}`, `../release/${file}`);
     })
 });
