@@ -75,6 +75,7 @@ export default async function handler(req, res) {
         })
         fs.mkdirSync("./deployments/"+id);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        console.log("Created deployment: " + name+" with id: "+id);
         return res.send({data: "Deployment created successfully!"});
     } else if (req.query.action === "getDeploymentInformation") {
         if (user.permission !== "admin" && user.permission !== "readwrite" && user.permission !== "readonly") {
@@ -274,6 +275,7 @@ export default async function handler(req, res) {
         let deploymentIndex = config.deployments.findIndex(d => d.id === id);
         config.deployments.splice(deploymentIndex, 1)
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        console.log("Deployment with id:"+id+" deleted!");
         return res.send({ data: "Successfully deleted deployment server!" }); 
     } else if (req.query.action === "changeEnv") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
@@ -351,6 +353,7 @@ export default async function handler(req, res) {
     }
 
     } catch(err) {
+        console.log(err.toString())
         return res.send({ error: "An internal server error occured!"+ err.toString()});
     }
 }

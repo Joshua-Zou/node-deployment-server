@@ -3,6 +3,7 @@ const fs = require("fs")
 const extract = require('extract-zip')
 const path = require("path")
 const child_process = require("child_process");
+const logger = require("./logger")
 
 async function main() {
     console.log("Starting update...");

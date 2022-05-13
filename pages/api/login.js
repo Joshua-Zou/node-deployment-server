@@ -16,6 +16,8 @@ export default function handler(req, res) {
     var userkey = hash.update(username);
     userkey = hash.update(password);
     userkey = hash.update(config.auth_secret_key);
-    return res.send({authkey: userkey.digest('hex')})
+    let authkey = userkey.digest('hex');
+    console.log(`User ${username} logged in and exchanged username+password for authkey ${authkey}`);
+    return res.send({authkey: authkey})
 }
   

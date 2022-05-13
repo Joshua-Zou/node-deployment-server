@@ -14,11 +14,14 @@ if (process.platform === "win32" || process.platform !== "linux") global.VolumeE
 else global.VolumeExplorer = null;
 const crypto = require("crypto")
 const serviceWorker = require('./service');
+const logger = require('./logger');
 
 var childProcess = require('child_process');
 var docker = new Docker();
 global.docker = docker;
 global.projectRoot = __dirname;
+global.logger = logger;
+
 
 const server = express()
 var httpServer = null;
@@ -29,6 +32,7 @@ var bashStdin = {};
 
 
 function main() {
+  console.log("\n\n\n\n\n\n\n\n\n_________________________________________\nStarting NDS...");
   app.prepare().then(() => {
 
     server.get("/mode-json.js", (req, res) => {
@@ -227,7 +231,6 @@ function main() {
           if (err) return reject(err);
           exec.start({ hijack: true, stdin: true }, function (err, stream) {
             stream.on("data", function(data) {
-              console.log(data.toString());
               sendSSE(data.toString());
             })
             bashStdin[id] = function(text) {
@@ -420,7 +423,6 @@ function runEventsHandler(request, response, next) {
   })
 
   request.on('close', () => {
-    console.log(`${clientId} Connection closed`);
     runListeners[id] = runListeners[id].filter(client => client.id !== clientId);
   });
 }
@@ -476,7 +478,6 @@ function buildEventsHandler(request, response, next) {
   buildListeners[id].push(newClient);
 
   request.on('close', () => {
-    console.log(`${clientId} Connection closed`);
     buildListeners[id] = buildListeners[id].filter(client => client.id !== clientId);
   });
 }
@@ -533,7 +534,6 @@ function bashEventsHandler(request, response, next) {
   bashListeners[id].push(newClient);
 
   request.on('close', () => {
-    console.log(`${clientId} Connection closed`);
     bashListeners[id] = bashListeners[id].filter(client => client.id !== clientId);
   });
 }
@@ -556,7 +556,7 @@ function convertZipToTar(sourceFile, outFile) {
   const tar = fs.createWriteStream(outFile);
   return new Promise((resolve, reject) => {
     zipToTar(sourceFile, { progress: false })
-      .on('file', console.log)
+      .on('file', function(){})
       .on('error', reject)
       .getStream()
       .pipe(tar)

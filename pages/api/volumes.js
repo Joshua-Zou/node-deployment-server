@@ -44,16 +44,21 @@ export default async function handler(req, res) {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
         }
-        let volume = docker.getVolume("nds-volume-" + req.query.id);
+        let id = req.query.id;
+        let volume = docker.getVolume("nds-volume-" + id);
         try {
             await volume.remove({ force: true })
             removeFromDB();
+            console.log("Deleted volume with id "+id);
             return res.send({ data: "Volume deleted!" });
         } catch (err) {
             if (err.toString().startsWith("Error: (HTTP code 404)")) {
+                console.log("Failed to remove volume "+id+" from the docker daemon. It most likely never existed in the first place. Removing from NDS database...");
                 removeFromDB();
+                console.log("Deleted volume with id "+id);
                 return res.send({ data: "Volume deleted!" });
             }
+            console.log("Failed to delete volume "+id+". Error: "+err);
             return res.send({ error: err.toString() });
         }
         function removeFromDB() {
@@ -87,6 +92,7 @@ export default async function handler(req, res) {
             name: req.query.name
         })
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+        console.log("Created volume with id "+id);
         return res.send({ data: "Volume created!" });
     } else if (req.query.action === "getVolume") {
         if (!req.query.id) return res.send({ error: "No id specified" });
@@ -151,6 +157,7 @@ export default async function handler(req, res) {
         })
         await zipDirectory("./static/tmp-volume-data/" + id + "/folder", "./static/tmp-volume-data/" + id + "/archive.zip");
         fs.rmSync("./static/tmp-volume-data/" + id + "/folder", { recursive: true, force: true });
+        console.log("Created download link for volume "+id);
         return res.send({ data: `/api/volumes?auth=${req.query.auth}&action=download&id=${req.query.id}` });
     } else if (req.query.action === "download") {
         if (!req.query.id) return res.send({ error: "No id specified" });
