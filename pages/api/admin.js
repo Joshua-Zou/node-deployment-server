@@ -39,7 +39,7 @@ export default function handler(req, res) {
         if (deleteUser.permission === "admin") return res.send({ error: "You can't delete admin accounts!" });
         config.authorized_users = config.authorized_users.filter(user => user.username !== deleteUsername);
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        console.log("User " + deleteUsername + " deleted!");
+        console.log(logprefix(user)+"User " + deleteUsername + " deleted!");
         return res.send({ data: "Success! User with username " + deleteUsername + " has been deleted!" });
     } else if (req.query.action === "addUser") {
         let addUsername = req.query.username;
@@ -49,7 +49,7 @@ export default function handler(req, res) {
         if (addPermission !== "readwrite" && addPermission !== "readonly") return res.send({ error: "You can't add admin accounts!" });
         if (config.authorized_users.find(user => user.username === addUsername)) return res.send({ error: "User with username " + addUsername + " already exists!" });
         config.authorized_users.push({ username: addUsername, password: addPassword, permission: addPermission });
-        console.log("User " + addUsername + " added!");
+        console.log(logprefix(user)+"User " + addUsername + " added!");
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         return res.send({ data: "Success! User with username " + addUsername + " has been added!" });
     } else if (req.query.action === "getRawConfigFile") {
@@ -72,7 +72,7 @@ export default function handler(req, res) {
         }
         config.port = newPort;
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
-        console.log("Port changed to " + newPort);
+        console.log(logprefix(user)+"Port changed to " + newPort);
         return res.send({ data: "Success! Port has been updated! Restart the server to apply the changes!" });
     } else if (req.query.action === "restartServer") {
         setTimeout(function () {
@@ -86,7 +86,7 @@ export default function handler(req, res) {
             });
             process.exit();
         }, 5000);
-        console.log("Queued server restart.");
+        console.log(logprefix(user)+"Queued server restart.");
         return res.send({ data: "Success! Server will restart in 5 seconds!" });
     }
 }

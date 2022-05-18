@@ -46,7 +46,7 @@ export default async function handler(req, res) {
         return res.send({ data: newestVersion });
     } else if (req.query.action === "update") {
         res.send({ data: "Updating..." });
-        console.log("Launching updater")
+        console.log(logprefix(user)+"Launching updater")
         process.on("exit", function () {
             require("child_process").spawn("npm", ["run", "update"], {
                 cwd: process.cwd(),

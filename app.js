@@ -21,7 +21,9 @@ var docker = new Docker();
 global.docker = docker;
 global.projectRoot = __dirname;
 global.logger = logger;
-
+global.logprefix = function(user) {
+  return `User with username "${user.username}" queried action with output: `
+}
 
 const server = express()
 var httpServer = null;
