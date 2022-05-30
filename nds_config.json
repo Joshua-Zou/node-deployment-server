@@ -9,11 +9,5 @@
     "port": 3100,
     "configFileVersion": 5,
     "deployments": [],
-    "volumes": [
-        {
-            "id": "c579b1021eedfe6000940f1369a0151d5175eaf4a2c2b6975b4e04e899367c3d",
-            "name": "pog"
-        }
-    ],
-    "auth_secret_key": "6aa510872e81f52aec825ce4732cc3c6502ca9ab7a066a2168d3ae93c8083eba"
+    "volumes": []
 }
