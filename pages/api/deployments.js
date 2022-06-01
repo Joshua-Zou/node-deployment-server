@@ -8,6 +8,7 @@ const extract = require('extract-zip')
 export const config = {
     api: {
         bodyParser: false,
+        responseLimit: false
     }
 };
 
@@ -353,7 +354,45 @@ export default async function handler(req, res) {
             config.deployments[deploymentIndex] = deployment;
             fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
             return res.send({ data: "Volume configuration updated successfully! Deploy again to apply changes" });
-        }
+        } else if (req.query.action === "pause") {
+            if (user.permission !== "admin" && user.permission !== "readwrite") {
+                return res.send({ error: "User does not have adequate permissions to complete this action!" });
+            }
+            let id = req.query.id;
+            let deployment = config.deployments.find(d => d.id === id);
+            if (!deployment) return res.send({ error: "Deployment not found!" });
+            let container = docker.getContainer(`nds-container-${id}`);
+            try {
+                await container.pause();
+                let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+                config.deployments[deploymentIndex].status = "paused";
+                fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+                console.log(logprefix(user) + "Deployment with id:" + id + " put on pause!");
+                return res.send({ data: "Successfully paused deployment!" });
+            } catch (err) {
+                console.log("An error occured when "+logprefix(user) + "Attempted to pause deployment with id:" + id + " but error occured: " + err.toString());
+                return res.send({ error: err.toString() });
+            }
+        } else if (req.query.action === "unpause") {
+            if (user.permission !== "admin" && user.permission !== "readwrite") {
+                return res.send({ error: "User does not have adequate permissions to complete this action!" });
+            }
+            let id = req.query.id;
+            let deployment = config.deployments.find(d => d.id === id);
+            if (!deployment) return res.send({ error: "Deployment not found!" });
+            let container = docker.getContainer(`nds-container-${id}`);
+            try {
+                await container.unpause();
+                let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+                config.deployments[deploymentIndex].status = "running";
+                fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+                console.log(logprefix(user) + "Deployment with id:" + id + " resumed!");
+                return res.send({ data: "Successfully resumed deployment!" });
+            } catch (err) {
+                console.log("An error occured when "+logprefix(user) + "Attempted to resume deployment with id:" + id + " but error occured: " + err.toString());
+                return res.send({ error: err.toString() });
+            }
+        } 
 
     } catch (err) {
         console.log(err.toString())

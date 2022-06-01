@@ -537,6 +537,7 @@ function Settings() {
         const router = useRouter();
         return (
             <div>
+                <PauseUnpauseBtn/>
                 <Button inverted color='red' onClick={() => {
                     if (!confirm("Are you sure you want to restart this deployment?")) return;
                     fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=restart`).then(res => res.json()).then(json => {
@@ -564,6 +565,43 @@ function Settings() {
             </div>
 
         )
+        function PauseUnpauseBtn(){
+            if (props.deployment.status === "paused") {
+                return (
+                    <Button inverted color='yellow' style={{ marginRight: "15px" }} onClick={() => {
+                        if (!confirm("Are you sure you want to unpause this deployment?")) return;
+                        fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=unpause`).then(res => res.json()).then(json => {
+                            if (json.error) alert(json.error);
+                            else {
+                                alert(json.data);
+                                getDeploymentInformation(id).then(deployment => {
+                                    setDeployment(deployment);
+                                })
+                            }
+                        })
+                    }}>
+                        Unpause deployment
+                    </Button>
+                )
+            } else {
+                return (
+                    <Button inverted color='yellow' style={{ marginRight: "15px" }} onClick={() => {
+                        if (!confirm("Are you sure you want to pause this deployment?")) return;
+                        fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=pause`).then(res => res.json()).then(json => {
+                            if (json.error) alert(json.error);
+                            else {
+                                alert(json.data);
+                                getDeploymentInformation(id).then(deployment => {
+                                    setDeployment(deployment);
+                                })
+                            }
+                        })
+                    }}>
+                        Pause deployment
+                    </Button>
+                )
+            }
+        }
     }
     function EnvVariables(props) {
         var varKey = "";
