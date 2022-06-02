@@ -8,14 +8,18 @@ var clck = 0;
 async function main(docker) {
     while (true) {
         if (!run) break;
+        let config = JSON.parse(fs.readFileSync("./nds_config.json"));
+        // adding non-breaking configuration changes
+        if (!config.jobs) config.jobs = [];
+        fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
 
+        // checking if a newer version is available
         if (clck % 10 == 0) {
             global.latestVersion = await getLatestVersion();
             clck = 0;
         }
         clck += 1;
 
-        let config = JSON.parse(fs.readFileSync("./nds_config.json"));
         // garbage manager
         let deploymentFolders = getDirectories("./deployments");
         deploymentFolders.forEach(folder => {
@@ -45,7 +49,7 @@ async function main(docker) {
             })
         })
 
-        // docker image cleanup (this causes io timeout)
+        // docker image cleanup 
         let images = await docker.listImages();
         images.forEach(image => {
             if (image.RepoTags[0].startsWith("nds-deployment")) {
@@ -59,7 +63,7 @@ async function main(docker) {
             }
         })
 
-        //docker volume cleanup (this also causes io timeout)
+        //docker volume cleanup 
         let volumes = await docker.listVolumes();
         volumes = volumes.Volumes;
         volumes.forEach(volume => {

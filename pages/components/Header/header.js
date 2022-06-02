@@ -18,6 +18,7 @@ export default function Header() {
             if (props.data.permission === "admin") {
                 return (
                     <div className={styles.signedIn}>
+                        <ActiveLink className={styles.username} href="/jobs">Jobs</ActiveLink>
                         <ActiveLink className={styles.username} href="/volumes">Storage Spaces</ActiveLink>
                         <ActiveLink className={styles.username} href="/dashboard">Deployments</ActiveLink>
                         <ActiveLink className={styles.username} href="/admin"><Icon name="user"/>{props.data.user}</ActiveLink>
@@ -28,6 +29,7 @@ export default function Header() {
             } else {
                 return (
                     <div className={styles.signedIn}>
+                        <ActiveLink className={styles.username} href="/jobs">Jobs</ActiveLink>
                         <ActiveLink className={styles.username} href="/volumes">Storage Spaces</ActiveLink>
                         <ActiveLink className={styles.username} href="/dashboard">Deployments</ActiveLink>
                         <ActiveLink className={styles.username} href="/dashboard"><Icon name="user"/>{props.data.user}</ActiveLink>
