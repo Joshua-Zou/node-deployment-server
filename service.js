@@ -5,6 +5,7 @@ const currentConfigFileVersion = 5;
 var run = true;
 var clck = 0;
 var jobFunctions = {};
+var lastJobScan = 0;
 
 async function main(docker) {
     while (true) {
@@ -94,7 +95,7 @@ async function main(docker) {
     }
 }
 async function jobManager(docker) {
-    //await sleep(1000)
+    await sleep(1000)
     console.log("Starting job manager...")
 
     let config = JSON.parse(fs.readFileSync("./nds_config.json"));
@@ -103,13 +104,21 @@ async function jobManager(docker) {
     jobs.forEach(job => {
         registerJob(job)
     })
+    await sleep(10000);
+    fs.watch('./nds_config.json', function (event, filename) {
+        if (event === "change") {
+            scanForNewJobs();
+        }
+    });
     function registerJob(job) {
         console.log("Registering/Updating job: " + job.name)
         jobFunctions[job.id] = async function () {
             console.log("Running job")
             // checking if a newer version of the job is available
             var newConfig = JSON.parse(fs.readFileSync("./nds_config.json"));
-            if (newConfig.jobs.find(j => j.id === job.id).version !== job.version) {
+            var newJob = newConfig.jobs.find(j => j.id === job.id);
+            if (!newJob) return unregisterJob(job.id);
+            if (newJob.version !== job.version) {
                 console.log("There was a newer version of the job found. Updating job...")
                 return registerJob(newConfig.jobs.find(j => j.id === job.id));
             }
@@ -150,9 +159,22 @@ async function jobManager(docker) {
                 console.log("An error occured while running job: " + job.name + "\n Error: " + err.toString())
             }
             // running the job in the future
-            setTimeout(jobFunctions[job.id], job.run_every * 60000);
+            setTimeout(jobFunctions[job.id] || function(){}, job.run_every * 60000);
         }
         jobFunctions[job.id]();
+    }
+    function unregisterJob(id) {
+        console.log("Unregistering job: " + id)
+        delete jobFunctions[id];
+    }
+    function scanForNewJobs(){
+        if (lastJobScan + 100 < Date.now()) return;
+
+        let newConfig = JSON.parse(fs.readFileSync("./nds_config.json"));
+        lastJobScan = Date.now();
+        newConfig.jobs.forEach(job => {
+            if (!jobFunctions[job.id]) registerJob(job)
+        })
     }
     await sleep(60000);
 }
