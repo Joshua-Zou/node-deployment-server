@@ -4,6 +4,7 @@ const currentConfigFileVersion = 5;
 
 var run = true;
 var clck = 0;
+var jobFunctions = {};
 
 async function main(docker) {
     while (true) {
@@ -92,6 +93,72 @@ async function main(docker) {
         await sleep(60000);
     }
 }
+async function jobManager(docker) {
+    //await sleep(1000)
+    console.log("Starting job manager...")
+
+    let config = JSON.parse(fs.readFileSync("./nds_config.json"));
+    let jobs = config.jobs;
+
+    jobs.forEach(job => {
+        registerJob(job)
+    })
+    function registerJob(job) {
+        console.log("Registering/Updating job: " + job.name)
+        jobFunctions[job.id] = async function () {
+            console.log("Running job")
+            // checking if a newer version of the job is available
+            var newConfig = JSON.parse(fs.readFileSync("./nds_config.json"));
+            if (newConfig.jobs.find(j => j.id === job.id).version !== job.version) {
+                console.log("There was a newer version of the job found. Updating job...")
+                return registerJob(newConfig.jobs.find(j => j.id === job.id));
+            }
+            // executing job commands
+            try {
+                for (var i in job.actions) {
+                    let action = job.actions[i];
+                    if (action.action === "backup_volume") {
+                        let vid = action.data.volume_id;
+                        let dir = action.data.path;
+                        const volume = VolumeExplorer.volume("nds-volume-" + vid)
+                        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { }
+
+                        await volume.copyDir("/", dir)
+                    } else if (action.action === "check_deployment") {
+                        let status = newConfig.deployments.find(d => d.id === action.data.container_id).status;
+                        await executeLayer2Actions(action.data[status])
+                        async function executeLayer2Actions(l2Actions) {
+                            for (let p in l2Actions) {
+                                let l2Action = l2Actions[p];
+                                if (l2Action.type === "fetch") {
+                                    let body;
+                                    if (l2Action.method.toLowerCase() !== "get") body = l2Action.body
+                                    await fetch(l2Action.url, {
+                                        method: l2Action.method,
+                                        body: body
+                                    })
+                                } else {
+                                    let container = docker.getContainer("nds-container-"+l2Action.container_id);
+                                    await container[l2Action.type]()
+                                }
+                            }
+                        } 
+                    }
+                }
+
+            } catch (err) {
+                console.log("An error occured while running job: " + job.name + "\n Error: " + err.toString())
+            }
+            // running the job in the future
+            setTimeout(jobFunctions[job.id], job.run_every * 60000);
+        }
+        jobFunctions[job.id]();
+    }
+    await sleep(60000);
+}
+
+
+
 
 function checkConfigFile() {
     let config = JSON.parse(fs.readFileSync("./nds_config.json"));
@@ -119,19 +186,27 @@ async function getLatestVersion() {
     return newestVersion;
 }
 
-module.exports.start = function(docker, errFunction){
+module.exports.start = function (docker, errFunction) {
     console.log("Starting NDS service...")
     async function watchMain() {
         try {
             await main(docker);
-        } catch(err) {
+        } catch (err) {
             errFunction(err.toString());
         }
     }
     watchMain()
+    async function watchJobManager() {
+        try {
+            await jobManager(docker);
+        } catch (err) {
+            errFunction(err.toString());
+        }
+    }
+    watchJobManager()
     let configGood = checkConfigFile();
     if (configGood !== true) errFunction(configGood, false);
 }
-module.exports.stop = function(){
+module.exports.stop = function () {
     run = false;
 }

@@ -9,5 +9,6 @@
     "port": 3100,
     "configFileVersion": 5,
     "deployments": [],
-    "volumes": []
+    "volumes": [],
+    "jobs": []
 }

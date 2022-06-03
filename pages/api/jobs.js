@@ -38,7 +38,7 @@ export default async function handler(req, res) {
         let id = req.query.id;
         console.log(logprefix(user) + "Deleted job with id " + id);
         removeFromDB()
-        return res.send({ data: "Volume deleted!" });
+        return res.send({ data: "Job deleted!" });
         function removeFromDB() {
             let index = config.jobs.findIndex(x => x.id === req.query.id);
             if (index !== -1) {
@@ -56,11 +56,12 @@ export default async function handler(req, res) {
             name: req.query.name,
             run_every: 60,
             enabled: false,
-            actions: []
+            actions: [],
+            version: 0
         })
         fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
         console.log(logprefix(user) + "Created job with id " + id);
-        return res.send({ data: "Volume created!" });
+        return res.send({ data: "Job created!" });
     } else if (req.query.action === "updateJob") {
         if (user.permission !== "admin" && user.permission !== "readwrite") {
             return res.send({ error: "User does not have adequate permissions to complete this action!" });
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
                     }
                 }
             }
+            job.version += 1;
 
             let jobIndex = config.jobs.findIndex(x => x.id === id);
             if (jobIndex === -1) return res.send({ error: "Job not found!" });

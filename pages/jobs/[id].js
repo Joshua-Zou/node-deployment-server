@@ -236,7 +236,7 @@ function DataWrapper() {
                                                                     } else newData.current.actions[i].data[key] = d.value;
                                                                     showChanges();
                                                                 }} />
-                                                                <span style={{ marginLeft: "5px", fontSize: "0.8em" }}><b>Options: </b>pause | unpause | restart | delete</span>
+                                                                <span style={{ marginLeft: "5px", fontSize: "0.8em" }}><b>Options: </b>pause | unpause | restart | stop | remove</span>
                                                             </div>
                                                         )
                                                     } else if (key !== "action") {
@@ -262,7 +262,7 @@ function DataWrapper() {
                                 )
                             })
                         }
-                        <Accordion.Title active={false} onClick={() => {
+                        <Accordion.Title style={{paddingLeft: "12px"}} active={false} onClick={() => {
                             if (props.customList) {
                                 setModalData({
                                     open: true,
@@ -330,6 +330,7 @@ function DataWrapper() {
                                             newData.current.actions.push({ 
                                                 action: "check_deployment", 
                                                 data: {
+                                                    container_id: "",
                                                     running: [],
                                                     "failed to start": []
                                                 }
@@ -343,7 +344,6 @@ function DataWrapper() {
                                 })
                             }
                         }}>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
                             <Icon name='plus circle' />
                             New Action
                         </Accordion.Title>
