@@ -122,6 +122,10 @@ async function jobManager(docker) {
                 console.log("There was a newer version of the job found. Updating job...")
                 return registerJob(newConfig.jobs.find(j => j.id === job.id));
             }
+            if (job.enabled === false) {
+                console.log("Job is disabled. Skipping...")
+                return setTimeout(jobFunctions[job.id] || function(){}, job.run_every * 60000);
+            }
             // executing job commands
             try {
                 for (var i in job.actions) {
