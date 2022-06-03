@@ -74,8 +74,7 @@ export default async function handler(req, res) {
             console.log(job)
             if (!job.run_every >= 10) return res.send({ error: "Run interval must be at least 10 minutes!" });
             if (!job.name) return res.send({ error: "Job name must be specified!" });
-            if (!job.actions) return res.send({ error: "Job actions must be specified!" });
-            if (!job.actions.length) return res.send({ error: "Job actions must be specified!" });
+            if (!job.actions && job.actions.length !== 0) return res.send({ error: "Job actions must be specified!" });
             for (let i in job.actions) {
                 let action = job.actions[i];
                 if (!action.data) return res.send({ error: "Job action data must be specified!" });
@@ -97,6 +96,7 @@ export default async function handler(req, res) {
             if (jobIndex === -1) return res.send({ error: "Job not found!" });
             config.jobs[jobIndex] = job;
             fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+            console.log(logprefix(user) + "updated job with id " + id);
             return res.send({data: "Job updated!"});
         }catch(err) {
             return res.send({ error: "Invalid job config! (Not valid JSON)" });

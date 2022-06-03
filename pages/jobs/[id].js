@@ -3,8 +3,8 @@ import Image from 'next/image'
 import styles from '../../styles/Admin.module.css'
 import Footer from "../components/Footer/footer.js";
 import Header from "../components/Header/header.js"
-import { Icon, Table, Button, Input, Dropdown, Checkbox, Accordion } from 'semantic-ui-react'
-import { useState, useRef } from 'react';
+import { Icon, Table, Button, Input, Dropdown, Checkbox, Accordion, Modal } from 'semantic-ui-react'
+import { useState, useRef, useCallback} from 'react';
 import React from "react"
 import ActiveLink from '../components/ActiveLink';
 const { useRouter } = require('next/router');
@@ -58,6 +58,8 @@ function DataWrapper() {
     const [volumes, setVolumes] = useState([]);
     const [containers, setContainers] = useState([]);
     var newData = useRef({})
+    var saveMsg = useRef(null)
+
     if (job.loading === true) {
         getJob().then(data => {
             newData.current = data;
@@ -97,9 +99,10 @@ function DataWrapper() {
 
                     <h3>Actions</h3>
                     <Actions />
-                    <br />
+                    <span ref={saveMsg} style={{color: "red"}}></span>
+                    <br/>
+                    <br/>
                     <Button content="Save" primary onClick={async () => {
-                        console.log(newData)
                         let newJob = newData.current;
                         if (!newJob.run_every >= 10) {
                             alert("Run interval must be greater than 10 minutes")
@@ -120,6 +123,11 @@ function DataWrapper() {
         function Actions(props) {
             const [activeIndices, setActiveIndices] = useState([]);
             const [clear, setClear] = useState(false);
+            const [modalData, setModalData] = useState({
+                open: false,
+                callbacks: {},
+                text: {}
+            });
 
             if (clear) {
                 setTimeout(function () {
@@ -134,115 +142,240 @@ function DataWrapper() {
                 newActiveIndices[index] = !newActiveIndices[index]
                 setActiveIndices(newActiveIndices);
             }
+            function closeModal() {
+                setModalData({
+                    open: false,
+                    callbacks: {},
+                    text: {}
+                })
+            }
             var list = job.actions;
             if (props.customList) list = props.customList;
             return (
-                <Accordion styled fluid exclusive={false} style={{ marginBottom: "20px" }}>
-                    {
-                        list.map((action, i) => {
-                            return (
-                                <div key={i}>
-                                    <Accordion.Title
-                                        active={activeIndices[i]}
-                                        index={i}
-                                        onClick={handleClick}>
-                                        {i}
-                                        &nbsp;
-                                        <Icon name='dropdown' />
-                                        {action.action}
-                                    </Accordion.Title>
-                                    <Accordion.Content active={activeIndices[i]} style={{ color: "black" }}>
-                                        {
-                                            Object.entries(action.data || action).map(([key, value], j) => {
-                                                if (key === "volume_id") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <Input value="volume" disabled />
-                                                            <Input style={{ width: "218px" }}>
-                                                                <Dropdown fluid placeholder='Volume' search selection options={volumes} defaultValue={value} onChange={(e, d) => {
-                                                                    if (props.customList) {
-                                                                        newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
-                                                                    } else newData.current.actions[i].data[key] = d.value;
-                                                                }} />
-                                                            </Input>
-                                                        </div>
-                                                    )
-                                                } else if (key === "container_id") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <Input value="deployments" disabled />
-                                                            <Input style={{ width: "218px" }}>
-                                                                <Dropdown fluid placeholder='deployments' search selection options={containers} defaultValue={value} onChange={(e, d) => {
-                                                                    if (props.customList) {
-                                                                        newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
-                                                                    } else newData.current.actions[i].data[key] = d.value;
-                                                                }} />
-                                                            </Input>
-                                                        </div>
-                                                    )
-                                                } else if (key === "running" || key === "failed to start") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <h4>When discovered that deployment is <span style={{ backgroundColor: "rgba(0,0,0,0.08)", padding: "0px 5px" }}>{key}</span></h4>
-                                                            <Actions customList={value} actionIndex={i} dataKey={key} refreshFunction={setActiveIndices} />
-                                                        </div>
-                                                    )
-                                                } else if (key === "type" && value === "fetch") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <Input value={key} disabled />
-                                                            <Input value={value} disabled />
-                                                        </div>
-                                                    )
-                                                } else if (key === "type" && value !== "fetch") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <Input value={key} disabled />
-                                                            <Input placeholder="pause | unpause | restart | delete" defaultValue={value} onChange={(e, d) => {
-                                                                if (props.customList) {
-                                                                    newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
-                                                                } else newData.current.actions[i].data[key] = d.value;
-                                                            }} />
-                                                            <span style={{ marginLeft: "5px", fontSize: "0.8em" }}><b>Options: </b>pause | unpause | restart | delete</span>
-                                                        </div>
-                                                    )
-                                                } else if (key !== "action") {
-                                                    return (
-                                                        <div key={j}>
-                                                            <Input value={key} disabled />
-                                                            <Input defaultValue={value} onChange={(e, d) => {
-                                                                if (props.customList) {
-                                                                    newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
-                                                                } else newData.current.actions[i].data[key] = d.value;
-                                                            }} />
-                                                        </div>
-                                                    )
+                <div>
+                    <Accordion styled fluid exclusive={false} style={{ marginBottom: "20px" }}>
+                        {
+                            list.map((action, i) => {
+                                return (
+                                    <div key={i}>
+                                        <Accordion.Title
+                                            active={activeIndices[i]}
+                                            index={i}
+                                            onClick={handleClick}>
+                                            {i}
+                                            &nbsp;
+                                            <Icon name='dropdown' />
+                                            {action.action}
+                                            <Icon name="delete" style={{cursor: "pointer", float: "right"}} onClick={() => {
+                                                showChanges();
+                                                if (props.customList) {
+                                                    newData.current.actions[props.actionIndex].data[props.dataKey].splice(i, 1);
+                                                    setJob(newData.current);
+                                                    setActiveIndices([])
+                                                    setClear(true)
                                                 } else {
-                                                    return (<div></div>)
+                                                    newData.current.actions.splice(i, 1);
+                                                    setJob(newData.current);
+                                                    setActiveIndices([])
+                                                    setClear(true)
+                                                }
+                                            }}/>
+                                        </Accordion.Title>
+                                        <Accordion.Content active={activeIndices[i]} style={{ color: "black" }}>
+                                            {
+                                                Object.entries(action.data || action).map(([key, value], j) => {
+                                                    if (key === "volume_id") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <Input value="volume" disabled />
+                                                                <Input style={{ width: "218px" }}>
+                                                                    <Dropdown fluid placeholder='Volume' search selection options={volumes} defaultValue={value} onChange={(e, d) => {
+                                                                        if (props.customList) {
+                                                                            newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
+                                                                        } else newData.current.actions[i].data[key] = d.value;
+                                                                        showChanges();
+                                                                    }} />
+                                                                </Input>
+                                                            </div>
+                                                        )
+                                                    } else if (key === "container_id") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <Input value="deployments" disabled />
+                                                                <Input style={{ width: "218px" }}>
+                                                                    <Dropdown fluid placeholder='deployments' search selection options={containers} defaultValue={value} onChange={(e, d) => {
+                                                                        if (props.customList) {
+                                                                            newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
+                                                                        } else newData.current.actions[i].data[key] = d.value;
+                                                                        showChanges();
+                                                                    }} />
+                                                                </Input>
+                                                            </div>
+                                                        )
+                                                    } else if (key === "running" || key === "failed to start") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <h4>When discovered that deployment is <span style={{ backgroundColor: "rgba(0,0,0,0.08)", padding: "0px 5px" }}>{key}</span></h4>
+                                                                <Actions customList={value} actionIndex={i} dataKey={key} refreshFunction={setActiveIndices} />
+                                                            </div>
+                                                        )
+                                                    } else if (key === "type" && value === "fetch") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <Input value={key} disabled />
+                                                                <Input value={value} disabled />
+                                                            </div>
+                                                        )
+                                                    } else if (key === "type" && value !== "fetch") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <Input value={key} disabled />
+                                                                <Input placeholder="pause | unpause | restart | delete" defaultValue={value} onChange={(e, d) => {
+                                                                    if (props.customList) {
+                                                                        newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
+                                                                    } else newData.current.actions[i].data[key] = d.value;
+                                                                    showChanges();
+                                                                }} />
+                                                                <span style={{ marginLeft: "5px", fontSize: "0.8em" }}><b>Options: </b>pause | unpause | restart | delete</span>
+                                                            </div>
+                                                        )
+                                                    } else if (key !== "action") {
+                                                        return (
+                                                            <div key={j}>
+                                                                <Input value={key} disabled />
+                                                                <Input defaultValue={value} onChange={(e, d) => {
+                                                                    if (props.customList) {
+                                                                        newData.current.actions[props.actionIndex].data[props.dataKey][i][key] = d.value;
+                                                                    } else newData.current.actions[i].data[key] = d.value;
+                                                                    showChanges();
+                                                                }} />
+                                                            </div>
+                                                        )
+                                                    } else {
+                                                        return (<div></div>)
+                                                    }
+                                                })
+                                            }
+                                            <br />
+                                        </Accordion.Content>
+                                    </div>
+                                )
+                            })
+                        }
+                        <Accordion.Title active={false} onClick={() => {
+                            if (props.customList) {
+                                setModalData({
+                                    open: true,
+                                    text: {
+                                        btn1: "Fetch API",
+                                        btn2: "Manipulate Container"
+                                    },
+                                    callbacks: {
+                                        cancelCallback: () => {
+                                            closeModal()
+                                        },
+                                        btn1: () => {
+                                            closeModal()
+                                            newData.current.actions[props.actionIndex].data[props.dataKey].push({
+                                                type: "fetch",
+                                                method: "POST",
+                                                url: "https://www.example.com",
+                                                body: "{}"
+                                            })
+                                            setJob(newData.current);
+                                            setActiveIndices([])
+                                            setClear(true)
+                                            showChanges();
+                                        },
+                                        btn2: () => {
+                                            closeModal()
+                                            newData.current.actions[props.actionIndex].data[props.dataKey].push({
+                                                type: "restart",
+                                                container_id: ""
+                                            })
+                                            setJob(newData.current);
+                                            setActiveIndices([])
+                                            setClear(true)
+                                            showChanges();
+                                        }
+                                    }
+                                })
+                            } else {
+                                setModalData({
+                                    open: true,
+                                    text: {
+                                        btn1: "Backup Volume",
+                                        btn2: "Check Deployment Status"
+                                    },
+                                    callbacks: {
+                                        cancelCallback: () => {
+                                            closeModal()
+                                        },
+                                        btn1: () => {
+                                            closeModal()
+                                            newData.current.actions.push({
+                                                action: "backup_volume", 
+                                                data: {
+                                                    volume_id: "",
+                                                    path: "/"
+                                                } 
+                                            })
+                                            setJob(newData.current);
+                                            setActiveIndices([])
+                                            setClear(true)
+                                            showChanges();
+                                        },
+                                        btn2: () => {
+                                            closeModal()
+                                            newData.current.actions.push({ 
+                                                action: "check_deployment", 
+                                                data: {
+                                                    running: [],
+                                                    "failed to start": []
                                                 }
                                             })
+                                            setJob(newData.current);
+                                            setActiveIndices([])
+                                            setClear(true)
+                                            showChanges();
                                         }
-                                        <br />
-                                        <Button content="Delete" onClick={() => {
-                                            if (props.customList) {
-                                                newData.current.actions[props.actionIndex].data[props.dataKey].splice(i, 1);
-                                                setJob(newData.current);
-                                                setActiveIndices([])
-                                                setClear(true)
-                                            } else {
-                                                newData.current.actions.splice(i, 1);
-                                                setJob(newData.current);
-                                                setActiveIndices([])
-                                                setClear(true)
-                                            }
-                                        }} />
-                                    </Accordion.Content>
-                                </div>
-                            )
-                        })
-                    }
-                </Accordion>
+                                    }
+                                })
+                            }
+                        }}>
+                            &nbsp;&nbsp;&nbsp;&nbsp;
+                            <Icon name='plus circle' />
+                            New Action
+                        </Accordion.Title>
+                    </Accordion>
+                    <NewModal data={modalData}/>
+                </div>
             )
+            function NewModal(props) {
+                return (
+                    <Modal
+                        size={"small"}
+                        open={props.data.open}
+                        onClose={() => {props.data.callbacks.cancelCallback()}}
+                    >
+                        <Modal.Header>Action Type</Modal.Header>
+                        <Modal.Content>
+                            <p style={{color: "black"}}>Choose action type to run</p>
+                        </Modal.Content>
+                        <Modal.Actions>
+                            <Button onClick={() => {props.data.callbacks.btn1() }}>
+                                {props.data.text.btn1}
+                            </Button>
+                            <Button onClick={() => {props.data.callbacks.btn2() }}>
+                                {props.data.text.btn2}
+                            </Button>
+                        </Modal.Actions>
+                    </Modal>
+                )
+            }
+        }
+        function showChanges() {
+            saveMsg.current.innerHTML = "You have unsaved changes!"
         }
     }
 }
