@@ -41,11 +41,11 @@ Deploying is easy!
  1. Navigate to the dashboard and click "New Deployment"
  2. Enter the deployment's name, port mappings, and memory. (All this can be changed at any point)
  3. Move to the `deploy` tab, and upload your code in a zip file. 
-**Important:** The folder containing your deployment MUST contain a `package.json` file in its highest directory. See below for examples
-**Important:** Windows built-in compressing may not work! Instead, use 7-zip
-**Do this:**
+**Important:** The folder containing your deployment MUST contain a `package.json` file in its highest directory. See below for examples\
+**Important:** Windows built-in compressing may not work! Instead, use 7-zip\
+**Do this:**\
 ![image](https://user-images.githubusercontent.com/77520157/162546470-a37c80f1-da96-489b-acea-33799b484596.png)
-**Not this:**
+**Not this:**\
 ![image](https://user-images.githubusercontent.com/77520157/162546496-1c2e30e2-d39d-4395-a555-5c04ccbe47e8.png)
  4. After uploading your code, you can navigate to the `explore` tab to preview your files before deploying
  5. Move to the `deploy` tab and hit `deploy`! 
