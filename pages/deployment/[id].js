@@ -376,6 +376,7 @@ function Settings() {
             <EnvVariables deployment={deployment} disabled={disabled} />
             <ContainerSettings deployment={deployment} disabled={disabled} />
             <Volumes deployment={deployment} disabled={disabled} />
+            <Permissions deployment={deployment} disabled={disabled} />
             <DeploymentActions deployment={deployment} disabled={disabled} />
         </div>
     )
@@ -537,7 +538,7 @@ function Settings() {
         const router = useRouter();
         return (
             <div>
-                <PauseUnpauseBtn/>
+                <PauseUnpauseBtn />
                 <Button inverted color='red' onClick={() => {
                     if (!confirm("Are you sure you want to restart this deployment?")) return;
                     fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&action=restart`).then(res => res.json()).then(json => {
@@ -565,7 +566,7 @@ function Settings() {
             </div>
 
         )
-        function PauseUnpauseBtn(){
+        function PauseUnpauseBtn() {
             if (props.deployment.status === "paused") {
                 return (
                     <Button inverted color='yellow' style={{ marginRight: "15px" }} onClick={() => {
@@ -777,6 +778,39 @@ function Settings() {
             )
         }
     }
+    function Permissions(props) {
+        const permissions = [{ "key": "AUDIT_CONTROL", "text": "AUDIT_CONTROL", "value": "AUDIT_CONTROL" }, { "key": "AUDIT_READ", "text": "AUDIT_READ", "value": "AUDIT_READ" }, { "key": "BLOCK_SUSPEND", "text": "BLOCK_SUSPEND", "value": "BLOCK_SUSPEND" }, { "key": "BPF", "text": "BPF", "value": "BPF" }, { "key": "CHECKPOINT_RESTORE", "text": "CHECKPOINT_RESTORE", "value": "CHECKPOINT_RESTORE" }, { "key": "DAC_READ_SEARCH", "text": "DAC_READ_SEARCH", "value": "DAC_READ_SEARCH" }, { "key": "IPC_LOCK", "text": "IPC_LOCK", "value": "IPC_LOCK" }, { "key": "IPC_OWNER", "text": "IPC_OWNER", "value": "IPC_OWNER" }, { "key": "LEASE", "text": "LEASE", "value": "LEASE" }, { "key": "LINUX_IMMUTABLE", "text": "LINUX_IMMUTABLE", "value": "LINUX_IMMUTABLE" }, { "key": "MAC_ADMIN", "text": "MAC_ADMIN", "value": "MAC_ADMIN" }, { "key": "MAC_OVERRIDE", "text": "MAC_OVERRIDE", "value": "MAC_OVERRIDE" }, { "key": "NET_ADMIN", "text": "NET_ADMIN", "value": "NET_ADMIN" }, { "key": "NET_BROADCAST", "text": "NET_BROADCAST", "value": "NET_BROADCAST" }, { "key": "PERFMON", "text": "PERFMON", "value": "PERFMON" }, { "key": "SYS_ADMIN", "text": "SYS_ADMIN", "value": "SYS_ADMIN" }, { "key": "SYS_BOOT", "text": "SYS_BOOT", "value": "SYS_BOOT" }, { "key": "SYS_MODULE", "text": "SYS_MODULE", "value": "SYS_MODULE" }, { "key": "SYS_NICE", "text": "SYS_NICE", "value": "SYS_NICE" }, { "key": "SYS_PACCT", "text": "SYS_PACCT", "value": "SYS_PACCT" }, { "key": "SYS_PTRACE", "text": "SYS_PTRACE", "value": "SYS_PTRACE" }, { "key": "SYS_RAWIO", "text": "SYS_RAWIO", "value": "SYS_RAWIO" }, { "key": "SYS_RESOURCE", "text": "SYS_RESOURCE", "value": "SYS_RESOURCE" }, { "key": "SYS_TIME", "text": "SYS_TIME", "value": "SYS_TIME" }, { "key": "SYS_TTY_CONFIG", "text": "SYS_TTY_CONFIG", "value": "SYS_TTY_CONFIG" }, { "key": "SYSLOG", "text": "SYSLOG", "value": "SYSLOG" }, { "key": "WAKE_ALARM", "text": "WAKE_ALARM", "value": "WAKE_ALARM" }]
+        const [value, setValue] = useState(props.deployment.permissions || [])
+        return (
+            <div className={styles.settingsSection}>
+                <h3>Add Permissions Policies</h3>
+                <Dropdown
+                    placeholder='Permissions (CAP-ADD)'
+                    fluid
+                    multiple
+                    search
+                    selection
+                    options={permissions}
+                    onChange={(e, d) => {
+                        setValue(d.value)
+                    }}
+                    value={value}
+                />
+                <br/>
+                <Button content="Save" primary disabled={props.disabled} onClick={async () => {
+                    let results = await fetch(`/api/deployments?auth=${getCachedAuth()}&id=${id}&permmissions=${JSON.stringify(value)}&action=updateDeploymentPermissions`);
+                    results = await results.json();
+                    if (results.error) alert(results.error);
+                    else {
+                        alert(results.data);
+                        getDeploymentInformation(id).then(deployment => {
+                            setDeployment(deployment);
+                        })
+                    }
+                }} />
+            </div>
+        )
+    }
 }
 function Bash() {
     const [startedStream, setStartedStream] = useState(false);
@@ -790,10 +824,10 @@ function Bash() {
                 consoleStream.current.close();
             }
             try {
-                fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id+"&cmd=exit", { method: "POST" }).then(res => res.json()).then(json => {
+                fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id + "&cmd=exit", { method: "POST" }).then(res => res.json()).then(json => {
                     console.log(json)
                 })
-            }catch(err){}
+            } catch (err) { }
         }
     }, [])
     if (startedStream === false) {
@@ -808,13 +842,13 @@ function Bash() {
                 <span>{path}</span>
                 <input ref={inputRef} placeholder="command" onKeyPress={(e) => {
                     if (e.key === "Enter") {
-                        newLog("$ "+inputRef.current.value);
-                        fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id+"&cmd="+inputRef.current.value, { method: "POST" }).then(res => res.json()).then(json => {
+                        newLog("$ " + inputRef.current.value);
+                        fetch('/api/deployment/runBashCmd?auth=' + getCachedAuth() + "&id=" + id + "&cmd=" + inputRef.current.value, { method: "POST" }).then(res => res.json()).then(json => {
                             console.log(json)
                         })
                         inputRef.current.value = "";
                     }
-                }}/>
+                }} />
             </div>
         </div>
     )
@@ -841,7 +875,7 @@ function Bash() {
         let lastL = log.split("\n").at(-1).replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '').trim();
         if (lastL.endsWith("#") && lastL.startsWith("root")) {
             setPath(lastL)
-            log = log.slice(0, -lastL.length-1)
+            log = log.slice(0, -lastL.length - 1)
         }
         if (consoles && consoles.current && consoles.current.newLine) consoles.current.newLine(log);
     }

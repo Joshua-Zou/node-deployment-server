@@ -392,7 +392,20 @@ export default async function handler(req, res) {
                 console.log("An error occured when "+logprefix(user) + "Attempted to resume deployment with id:" + id + " but error occured: " + err.toString());
                 return res.send({ error: err.toString() });
             }
-        } 
+        } else if (req.query.action === "updateDeploymentPermissions") {
+            if (user.permission !== "admin" && user.permission !== "readwrite") {
+                return res.send({ error: "User does not have adequate permissions to complete this action!" });
+            }
+            let id = req.query.id;
+            let deployment = config.deployments.find(d => d.id === id);
+            if (!deployment) return res.send({ error: "Deployment not found!" });
+            let deploymentIndex = config.deployments.findIndex(d => d.id === id);
+
+            deployment.permissions = JSON.parse(req.query.permmissions || "[]")
+            config.deployments[deploymentIndex] = deployment;
+            fs.writeFileSync("./nds_config.json", JSON.stringify(config, null, 4));
+            return res.send({ data: "Deployment updated successfully! Deploy again to apply changes" });
+        }
 
     } catch (err) {
         console.log(err.toString())

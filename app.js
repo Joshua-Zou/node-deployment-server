@@ -167,9 +167,10 @@ function main() {
             Name: restartPolicy[deployment.startContainerOnStartup],
           },
           PortBindings: hostConfigPorts,
-          Mounts: mounts
+          Mounts: mounts,
+          CapAdd: deployment.permissions || undefined
         },
-        Env: env
+        Env: env,
       }, function (err, container) {
         if (err) {
           sendSSE("Error starting container: " + err.toString());
