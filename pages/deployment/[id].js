@@ -391,7 +391,7 @@ function Settings() {
                         {
                             props.deployment.portMappings.map((ports, i) => {
                                 return (
-                                    <KeyValuePair i={i} keyx={ports.split(":")[0]} value={ports.split(":")[1]} key={i} index={i} />
+                                    <KeyValuePair i={i} keyx={ports.split(":")[0]} value={ports.split(":")[1]+(ports.split(":")[2] ? ":"+ports.split(":")[2] : "")} key={i} index={i} />
                                 )
                             })
                         }

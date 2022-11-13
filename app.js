@@ -137,12 +137,12 @@ function main() {
       for (let i in deployment.portMappings) {
         let port = deployment.portMappings[i];
         let internalPort = port.split(":")[0];
-        let externalPort = port.split(":")[1];
+        let externalPort = port.split(":")[2] || port.split(":")[1];
         if (!internalPort.endsWith("/tcp") && !internalPort.endsWith("/udp")) internalPort += "/tcp";
         ports[internalPort] = {}
 
         hostConfigPorts[internalPort] = [
-          {HostPort: externalPort}
+          {HostPort: externalPort, HostIP: (port.split(":")[2] ? port.split(":")[1] : "0.0.0.0")}
         ]
 
       }
